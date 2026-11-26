@@ -5,6 +5,9 @@ import morgan from 'morgan';
 import { ENV } from './config/env';
 import { errorHandler, AppError } from './middleware/error.middleware';
 import { healthRouter } from './routes/health.routes';
+import { authRouter } from './routes/auth.routes';
+import { authenticateToken, requireRoles, requireOrgAccess, AuthenticatedRequest } from './middleware/auth.middleware';
+import { UserRole, OrgRole } from '@queueless/shared-types';
 
 export function createApp(): Express {
   const app = express();
@@ -28,6 +31,31 @@ export function createApp(): Express {
 
   // API Routes
   app.use('/api/v1/health', healthRouter);
+  app.use('/api/v1/auth', authRouter);
+
+  // Test Route for Role-Based Access Control Verification
+  app.get(
+    '/api/v1/test/admin-only',
+    authenticateToken,
+    requireRoles(UserRole.SYSTEM_ADMIN),
+    (req: AuthenticatedRequest, res: Response) => {
+      res.json({ success: true, message: 'Welcome System Admin', user: req.user });
+    }
+  );
+
+  // Test Route for Organization Tenant Isolation Verification
+  app.get(
+    '/api/v1/test/org-admin-only',
+    authenticateToken,
+    requireOrgAccess([OrgRole.ORG_OWNER, OrgRole.ORG_ADMIN]),
+    (req: AuthenticatedRequest, res: Response) => {
+      res.json({
+        success: true,
+        message: 'Welcome Org Admin/Owner',
+        membership: req.membership,
+      });
+    }
+  );
 
   // 404 Handler
   app.use((req: Request, res: Response, next) => {

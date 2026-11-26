@@ -1,25 +1,53 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dio/dio.dart';
-import 'core/network/api_client.dart';
+import 'package:go_router/go_router.dart';
+import '../features/auth/providers/auth_provider.dart';
+import '../features/auth/screens/login_screen.dart';
+import '../features/auth/screens/register_screen.dart';
+import '../core/network/api_client.dart';
 
-// State provider for health status
-final healthCheckProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
-  try {
-    // For local Linux desktop or web test: localhost:5000, fallback to 10.0.2.2 for Android
-    final dio = Dio(BaseOptions(
-      baseUrl: 'http://localhost:5000/api/v1',
-      connectTimeout: const Duration(seconds: 4),
-      receiveTimeout: const Duration(seconds: 4),
-    ));
-    final response = await dio.get('/health');
-    return response.data as Map<String, dynamic>;
-  } catch (e) {
-    throw Exception('Failed to connect to QueueLess Backend API: $e');
-  }
+final routerProvider = Provider<GoRouter>((ref) {
+  final authState = ref.watch(authStateProvider);
+
+  return GoRouter(
+    initialLocation: authState.isAuthenticated ? '/home' : '/login',
+    redirect: (context, state) {
+      final isLoggingIn = state.matchedLocation == '/login' || state.matchedLocation == '/register';
+
+      if (authState.isLoading) return null;
+
+      if (!authState.isAuthenticated && !isLoggingIn) {
+        return '/login';
+      }
+
+      if (authState.isAuthenticated && isLoggingIn) {
+        return '/home';
+      }
+
+      return null;
+    },
+    routes: [
+      GoRoute(
+        path: '/login',
+        builder: (context, state) => const CustomerLoginScreen(),
+      ),
+      GoRoute(
+        path: '/register',
+        builder: (context, state) => const CustomerRegisterScreen(),
+      ),
+      GoRoute(
+        path: '/home',
+        builder: (context, state) => const CustomerHomeScreen(),
+      ),
+    ],
+  );
 });
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Configure default base URL for local testing
+  ApiClient.setBaseUrl('http://127.0.0.1:5000/api/v1');
+
   runApp(
     const ProviderScope(
       child: QueueLessCustomerApp(),
@@ -27,14 +55,17 @@ void main() {
   );
 }
 
-class QueueLessCustomerApp extends StatelessWidget {
+class QueueLessCustomerApp extends ConsumerWidget {
   const QueueLessCustomerApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
+
+    return MaterialApp.router(
       title: 'QueueLess Customer',
       debugShowCheckedModeBanner: false,
+      routerConfig: router,
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
@@ -49,7 +80,6 @@ class QueueLessCustomerApp extends StatelessWidget {
           centerTitle: true,
         ),
       ),
-      home: const CustomerHomeScreen(),
     );
   }
 }
@@ -59,14 +89,24 @@ class CustomerHomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final healthAsync = ref.watch(healthCheckProvider);
+    final authState = ref.watch(authStateProvider);
+    final user = authState.user;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'QueueLess',
-          style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5),
-        ),
+        title: const Text('QueueLess', style: TextStyle(fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout_rounded),
+            tooltip: 'Sign Out',
+            onPressed: () async {
+              await ref.read(authStateProvider.notifier).logout();
+              if (context.mounted) {
+                context.go('/login');
+              }
+            },
+          ),
+        ],
       ),
       body: SafeArea(
         child: Padding(
@@ -74,9 +114,9 @@ class CustomerHomeScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Hero card
+              // User greeting card
               Container(
-                padding: const EdgeInsets.all(24.0),
+                padding: const EdgeInsets.all(20.0),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xFF4F46E5), Color(0xFF3730A3)],
@@ -92,26 +132,31 @@ class CustomerHomeScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 36),
-                    SizedBox(height: 12),
-                    Text(
-                      'Welcome to QueueLess',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                    CircleAvatar(
+                      radius: 26,
+                      backgroundColor: Colors.white.withOpacity(0.2),
+                      child: Text(
+                        (user?.fullName.isNotEmpty ?? false) ? user!.fullName[0].toUpperCase() : 'C',
+                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                     ),
-                    SizedBox(height: 6),
-                    Text(
-                      'Discover service centers, take remote tickets, and track your position in real time.',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFFE0E7FF),
-                        height: 1.4,
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Hello, ${user?.fullName ?? 'Customer'}',
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            user?.email ?? '',
+                            style: const TextStyle(fontSize: 12, color: Color(0xFFE0E7FF)),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -119,127 +164,37 @@ class CustomerHomeScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 28),
 
-              // Foundation status header
               const Text(
-                'Foundation Connectivity',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E293B),
-                ),
+                'Account & Session Status',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
               ),
               const SizedBox(height: 12),
 
-              // Health Status Widget
-              healthAsync.when(
-                data: (data) => Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.check_circle_rounded, color: Colors.green, size: 28),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'API Status: ${data['status']?.toString().toUpperCase()}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF0F172A),
-                                  ),
-                                ),
-                                Text(
-                                  'Database: ${data['database']} (PostgreSQL)',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Color(0xFF64748B),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.refresh, color: Color(0xFF4F46E5)),
-                            onPressed: () => ref.refresh(healthCheckProvider),
-                          ),
-                        ],
-                      ),
-                      const Divider(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Version: v${data['version']}',
-                            style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                          ),
-                          Text(
-                            'Environment: ${data['environment']}',
-                            style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
                 ),
-                loading: () => Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: const Center(
-                    child: CircularProgressIndicator(),
-                  ),
-                ),
-                error: (err, stack) => Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFFCA5A5)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.error_outline_rounded, color: Colors.red, size: 28),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          '$err',
-                          style: const TextStyle(fontSize: 12, color: Color(0xFF991B1B)),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.verified_user_rounded, color: Colors.green, size: 24),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Authentication Active', style: TextStyle(fontWeight: FontWeight.bold)),
+                              Text('Role: ${user?.role ?? 'CUSTOMER'} • JWT Bearer Attached', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                            ],
+                          ),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.refresh, color: Colors.red),
-                        onPressed: () => ref.refresh(healthCheckProvider),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const Spacer(),
-              ElevatedButton.icon(
-                onPressed: () {
-                  ref.refresh(healthCheckProvider);
-                },
-                icon: const Icon(Icons.sync_rounded),
-                label: const Text('Check Backend Connection'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4F46E5),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ],
