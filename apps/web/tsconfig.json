@@ -14,8 +14,13 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@queueless/shared-types": ["../../packages/shared-types/src/index.ts"]
+    }
   },
-  "include": ["src"],
+  "include": ["src", "../../packages/shared-types/src/**/*"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

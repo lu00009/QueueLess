@@ -1,4 +1,4 @@
-import { UserRole, OrgRole, TicketStatus, CounterStatus, QueueStatus } from './enums';
+import { UserRole, OrgRole, TicketStatus, CounterStatus } from './enums';
 
 export interface UserDto {
   id: string;
