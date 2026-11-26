@@ -1,0 +1,411 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  SYSTEM_ADMIN
+  CUSTOMER
+}
+
+enum OrgRole {
+  ORG_OWNER
+  ORG_ADMIN
+  ORG_STAFF
+}
+
+enum MembershipStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+}
+
+enum OrgStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum CounterStatus {
+  IDLE
+  SERVING
+  PAUSED
+  OFFLINE
+}
+
+enum QueueStatus {
+  OPEN
+  PAUSED
+  CLOSED
+}
+
+enum TicketStatus {
+  WAITING
+  CALLED
+  SERVING
+  COMPLETED
+  SKIPPED
+  CANCELLED
+}
+
+enum TicketEventType {
+  ISSUED
+  POSITION_CHANGED
+  CALLED
+  SERVING
+  COMPLETED
+  SKIPPED
+  RECALLED
+  CANCELLED
+}
+
+enum NotificationType {
+  TICKET_ISSUED
+  TURN_APPROACHING
+  CALLED
+  CANCELLED
+  SYSTEM
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  READ
+}
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  phone        String?
+  passwordHash String
+  fullName     String
+  role         UserRole   @default(CUSTOMER)
+  avatarUrl    String?
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  memberships       OrganizationMembership[]
+  tickets           QueueTicket[]
+  staffAssignments  StaffAssignment[]
+  deviceTokens      DeviceToken[]
+  auditLogs         AuditLog[]
+  notifications     Notification[]
+  ticketEvents      TicketEvent[]
+  operatedCounters  ServiceCounter[]         @relation("CounterOperator")
+
+  @@index([email])
+  @@index([phone])
+  @@index([role])
+}
+
+model Organization {
+  id        String    @id @default(uuid())
+  name      String
+  slug      String    @unique
+  logoUrl   String?
+  address   String?
+  timezone  String    @default("UTC")
+  status    OrgStatus @default(ACTIVE)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  memberships      OrganizationMembership[]
+  branches         Branch[]
+  services         Service[]
+  counters         ServiceCounter[]
+  queues           Queue[]
+  tickets          QueueTicket[]
+  auditLogs        AuditLog[]
+  staffAssignments StaffAssignment[]
+
+  @@index([slug])
+  @@index([status])
+}
+
+model OrganizationMembership {
+  id             String           @id @default(uuid())
+  userId         String
+  organizationId String
+  role           OrgRole          @default(ORG_STAFF)
+  status         MembershipStatus @default(ACTIVE)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([userId])
+  @@index([organizationId])
+  @@index([organizationId, role])
+}
+
+model Branch {
+  id             String   @id @default(uuid())
+  organizationId String
+  name           String
+  code           String
+  address        String?
+  phone          String?
+  latitude       Float?
+  longitude      Float?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization     Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  operatingHours   OperatingHour[]
+  services         Service[]
+  counters         ServiceCounter[]
+  queues           Queue[]
+  tickets          QueueTicket[]
+  staffAssignments StaffAssignment[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@index([organizationId, isActive])
+  @@index([latitude, longitude])
+}
+
+model OperatingHour {
+  id        String  @id @default(uuid())
+  branchId  String
+  dayOfWeek Int     // 0=Sunday..6=Saturday
+  openTime  String  // HH:MM
+  closeTime String  // HH:MM
+  isClosed  Boolean @default(false)
+
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([branchId, dayOfWeek])
+}
+
+model Service {
+  id                       String   @id @default(uuid())
+  organizationId           String
+  branchId                 String
+  name                     String
+  code                     String
+  description              String?
+  estimatedDurationMinutes Int      @default(15)
+  maxDailyTickets          Int      @default(500)
+  priorityLevel            Int      @default(2)
+  isActive                 Boolean  @default(true)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  organization Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch                     @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  queues       Queue[]
+  tickets      QueueTicket[]
+  counters     CounterServiceAssignment[]
+
+  @@unique([branchId, code])
+  @@index([branchId, isActive])
+  @@index([organizationId])
+}
+
+model ServiceCounter {
+  id             String        @id @default(uuid())
+  organizationId String
+  branchId       String
+  name           String
+  number         String
+  status         CounterStatus @default(OFFLINE)
+  currentStaffId String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization     Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch           Branch                     @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  currentStaff     User?                      @relation("CounterOperator", fields: [currentStaffId], references: [id], onDelete: SetNull)
+  supportedServices CounterServiceAssignment[]
+  staffAssignments StaffAssignment[]
+  servingTickets   QueueTicket[]
+  ticketEvents     TicketEvent[]
+
+  @@unique([branchId, number])
+  @@index([branchId, status])
+}
+
+model CounterServiceAssignment {
+  id        String @id @default(uuid())
+  counterId String
+  serviceId String
+
+  counter ServiceCounter @relation(fields: [counterId], references: [id], onDelete: Cascade)
+  service Service        @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([counterId, serviceId])
+}
+
+model StaffAssignment {
+  id             String   @id @default(uuid())
+  userId         String
+  organizationId String
+  branchId       String
+  counterId      String?
+  isPrimary      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch          @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  counter      ServiceCounter? @relation(fields: [counterId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, branchId])
+}
+
+model Queue {
+  id                     String      @id @default(uuid())
+  organizationId         String
+  branchId               String
+  serviceId              String
+  name                   String
+  prefix                 String      @default("A")
+  currentSequence        Int         @default(0)
+  status                 QueueStatus @default(OPEN)
+  currentServingTicketId String?
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+
+  organization  Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch        Branch              @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  service       Service             @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  configuration QueueConfiguration?
+  tickets       QueueTicket[]
+
+  @@unique([branchId, serviceId])
+  @@index([branchId, status])
+}
+
+model QueueConfiguration {
+  id                         String  @id @default(uuid())
+  queueId                    String  @unique
+  maxWaitingCapacity         Int     @default(100)
+  autoCallNext               Boolean @default(false)
+  allowRemoteJoin            Boolean @default(true)
+  geofenceRadiusMeters       Int     @default(5000)
+  notificationThresholdAhead Int     @default(3)
+  bufferMinutes              Int     @default(5)
+  resetDaily                 Boolean @default(true)
+
+  queue Queue @relation(fields: [queueId], references: [id], onDelete: Cascade)
+}
+
+model QueueTicket {
+  id                   String       @id @default(uuid())
+  organizationId       String
+  branchId             String
+  serviceId            String
+  queueId              String
+  counterId            String?
+  userId               String?
+  customerName         String
+  customerPhone        String?
+  ticketNumber         String
+  sequenceNumber       Int
+  priorityScore        Int          @default(1)
+  status               TicketStatus @default(WAITING)
+  estimatedServiceTime DateTime?
+  calledAt             DateTime?
+  servingStartedAt     DateTime?
+  completedAt          DateTime?
+  skippedAt            DateTime?
+  cancelledAt          DateTime?
+  skipReason           String?
+  cancelReason         String?
+  verificationCode     String
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  organization  Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  branch        Branch          @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  service       Service         @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  queue         Queue           @relation(fields: [queueId], references: [id], onDelete: Restrict)
+  counter       ServiceCounter? @relation(fields: [counterId], references: [id], onDelete: SetNull)
+  user          User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  events        TicketEvent[]
+  notifications Notification[]
+
+  @@unique([queueId, sequenceNumber])
+  @@index([userId, status])
+  @@index([queueId, status, priorityScore, sequenceNumber])
+  @@index([branchId, createdAt])
+  @@index([counterId, status])
+}
+
+model TicketEvent {
+  id                String          @id @default(uuid())
+  ticketId          String
+  eventType         TicketEventType
+  performedByUserId String?
+  counterId         String?
+  previousStatus    String?
+  newStatus         String?
+  metadata          Json?
+  createdAt         DateTime        @default(now())
+
+  ticket            QueueTicket     @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  performedByUser   User?           @relation(fields: [performedByUserId], references: [id], onDelete: SetNull)
+  counter           ServiceCounter? @relation(fields: [counterId], references: [id], onDelete: SetNull)
+
+  @@index([ticketId, createdAt])
+}
+
+model Notification {
+  id             String             @id @default(uuid())
+  userId         String
+  organizationId String?
+  ticketId       String?
+  title          String
+  message        String
+  type           NotificationType
+  status         NotificationStatus @default(PENDING)
+  sentAt         DateTime?
+  readAt         DateTime?
+  createdAt      DateTime           @default(now())
+
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ticket QueueTicket? @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+}
+
+model DeviceToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  platform  String   @default("ANDROID")
+  lastUsedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model AuditLog {
+  id             String   @id @default(uuid())
+  organizationId String
+  userId         String?
+  action         String
+  entityType     String
+  entityId       String
+  oldValue       Json?
+  newValue       Json?
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([entityType, entityId])
+}

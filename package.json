@@ -1,0 +1,22 @@
+{
+  "name": "queueless-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:backend": "npm --workspace=apps/backend run dev",
+    "dev:web": "npm --workspace=apps/web run dev",
+    "build:backend": "npm --workspace=apps/backend run build",
+    "build:web": "npm --workspace=apps/web run build",
+    "build:types": "npm --workspace=packages/shared-types run build",
+    "db:migrate": "npm --workspace=apps/backend run db:migrate",
+    "db:seed": "npm --workspace=apps/backend run db:seed",
+    "test:backend": "npm --workspace=apps/backend run test"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}
