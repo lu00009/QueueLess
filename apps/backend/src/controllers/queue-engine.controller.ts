@@ -64,4 +64,21 @@ export class QueueEngineController {
       res.status(200).json({ success: true, data: ticket });
     } catch (err) { next(err); }
   }
+
+  static async getQueueStats(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const { branchId } = req.params;
+      const orgId = req.membership?.organizationId;
+      const stats = await QueueEngineService.getQueueStats(branchId, orgId);
+      res.status(200).json({ success: true, data: stats });
+    } catch (err) { next(err); }
+  }
+
+  static async getSkippedTickets(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const { branchId } = req.params;
+      const skipped = await QueueEngineService.getSkippedTickets(branchId);
+      res.status(200).json({ success: true, data: skipped });
+    } catch (err) { next(err); }
+  }
 }

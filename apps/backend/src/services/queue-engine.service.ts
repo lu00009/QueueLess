@@ -435,6 +435,76 @@ export class QueueEngineService {
   }
 
   /**
+   * Get queue statistics and operational metrics for staff console
+   */
+  static async getQueueStats(branchId: string, orgId?: string) {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const whereBranch: any = { branchId };
+    if (orgId) whereBranch.organizationId = orgId;
+
+    const [waitingCount, servingCount, completedTodayCount, skippedTodayCount, completedToday] = await Promise.all([
+      prisma.queueTicket.count({
+        where: { ...whereBranch, status: TicketStatus.WAITING },
+      }),
+      prisma.queueTicket.count({
+        where: { ...whereBranch, status: { in: [TicketStatus.CALLED, TicketStatus.SERVING] } },
+      }),
+      prisma.queueTicket.count({
+        where: { ...whereBranch, status: TicketStatus.COMPLETED, completedAt: { gte: todayStart } },
+      }),
+      prisma.queueTicket.count({
+        where: { ...whereBranch, status: TicketStatus.SKIPPED, skippedAt: { gte: todayStart } },
+      }),
+      prisma.queueTicket.findMany({
+        where: {
+          ...whereBranch,
+          status: TicketStatus.COMPLETED,
+          completedAt: { gte: todayStart },
+          servingStartedAt: { not: null },
+        },
+        select: { servingStartedAt: true, completedAt: true },
+      }),
+    ]);
+
+    const totalSeconds = completedToday.reduce((acc, curr) => {
+      if (curr.completedAt && curr.servingStartedAt) {
+        return acc + Math.round((curr.completedAt.getTime() - curr.servingStartedAt.getTime()) / 1000);
+      }
+      return acc;
+    }, 0);
+    const avgServiceTimeSeconds = completedToday.length > 0 ? Math.round(totalSeconds / completedToday.length) : 0;
+
+    return {
+      waitingCount,
+      servingCount,
+      completedTodayCount,
+      skippedTodayCount,
+      avgServiceTimeSeconds,
+      avgServiceTimeMinutes: Math.round(avgServiceTimeSeconds / 60),
+    };
+  }
+
+  /**
+   * Get recently skipped tickets eligible for recall
+   */
+  static async getSkippedTickets(branchId: string) {
+    return prisma.queueTicket.findMany({
+      where: {
+        branchId,
+        status: TicketStatus.SKIPPED,
+      },
+      include: {
+        service: true,
+        counter: true,
+      },
+      orderBy: { skippedAt: 'desc' },
+      take: 20,
+    });
+  }
+
+  /**
    * Get ordered waiting list for a specific queue
    */
   static async getWaitingList(queueId: string) {

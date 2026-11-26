@@ -62,3 +62,17 @@ queueEngineRouter.get(
   requireOrgAccess(),
   QueueEngineController.getCurrentCounterTicket
 );
+
+queueEngineRouter.get(
+  '/branches/:branchId/stats',
+  authenticateToken,
+  requireOrgAccess(),
+  QueueEngineController.getQueueStats
+);
+
+queueEngineRouter.get(
+  '/branches/:branchId/skipped',
+  authenticateToken,
+  requireOrgAccess(),
+  QueueEngineController.getSkippedTickets
+);
