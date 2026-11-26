@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/qless_logo.dart';
 import '../providers/auth_provider.dart';
 
 class CustomerRegisterScreen extends ConsumerStatefulWidget {
@@ -75,22 +76,9 @@ class _CustomerRegisterScreenState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Center(
-                        child: Column(
-                          children: [
-                            const Text(
-                              'Create account',
-                              style: AppTheme.titleLarge,
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: AppTheme.space8),
-                            const Text(
-                              'Join QueueLess to hold your place in line remotely.',
-                              style: AppTheme.caption,
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
+                      const QLessLogo(
+                        emblemSize: 56,
+                        customSubtitle: 'Join QueueLess to hold your place in line remotely.',
                       ),
                       const SizedBox(height: AppTheme.space24),
 

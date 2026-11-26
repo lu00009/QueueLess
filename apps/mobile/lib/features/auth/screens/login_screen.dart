@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/qless_logo.dart';
 import '../providers/auth_provider.dart';
 
 class CustomerLoginScreen extends ConsumerStatefulWidget {
@@ -64,23 +65,7 @@ class _CustomerLoginScreenState extends ConsumerState<CustomerLoginScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Center(
-                        child: Column(
-                          children: [
-                            const Text(
-                              'QueueLess',
-                              style: AppTheme.titleLarge,
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: AppTheme.space8),
-                            const Text(
-                              'Access your remote queue tickets and saved visits.',
-                              style: AppTheme.caption,
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
+                      const QLessLogo(),
                       const SizedBox(height: AppTheme.space32),
 
                       if (authState.error != null) ...[

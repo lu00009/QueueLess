@@ -145,6 +145,17 @@ class CustomerProfileScreen extends ConsumerWidget {
                   ),
                 ),
               ),
+              const SizedBox(height: AppTheme.space24),
+              const Center(
+                child: Text(
+                  'QueueLess (QLess) • v1.0.0',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.softGrey,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
