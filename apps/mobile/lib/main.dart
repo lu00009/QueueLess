@@ -1,32 +1,52 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../features/auth/providers/auth_provider.dart';
-import '../features/auth/screens/login_screen.dart';
-import '../features/auth/screens/register_screen.dart';
-import '../core/network/api_client.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'core/network/api_client.dart';
+import 'features/auth/providers/auth_provider.dart';
+import 'features/auth/screens/login_screen.dart';
+import 'features/auth/screens/register_screen.dart';
+import 'features/onboarding/screens/onboarding_screen.dart';
+import 'features/home/screens/home_navigation_screen.dart';
+import 'features/discovery/screens/branch_detail_screen.dart';
+import 'features/discovery/models/branch_model.dart';
+import 'features/ticket/screens/join_queue_screen.dart';
+import 'features/ticket/screens/digital_ticket_screen.dart';
+import 'features/ticket/screens/ticket_history_screen.dart';
+import 'features/ticket/models/ticket_model.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
 
   return GoRouter(
-    initialLocation: authState.isAuthenticated ? '/home' : '/login',
-    redirect: (context, state) {
-      final isLoggingIn = state.matchedLocation == '/login' || state.matchedLocation == '/register';
+    initialLocation: '/',
+    redirect: (context, state) async {
+      final prefs = await SharedPreferences.getInstance();
+      final onboardingDone = prefs.getBool('onboarding_completed') ?? false;
+
+      if (!onboardingDone && state.matchedLocation != '/onboarding') {
+        return '/onboarding';
+      }
 
       if (authState.isLoading) return null;
 
-      if (!authState.isAuthenticated && !isLoggingIn) {
+      final isAuthRoute = state.matchedLocation == '/login' || state.matchedLocation == '/register';
+
+      if (!authState.isAuthenticated && !isAuthRoute && state.matchedLocation != '/onboarding') {
         return '/login';
       }
 
-      if (authState.isAuthenticated && isLoggingIn) {
-        return '/home';
+      if (authState.isAuthenticated && (isAuthRoute || state.matchedLocation == '/onboarding')) {
+        return '/';
       }
 
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingScreen(),
+      ),
       GoRoute(
         path: '/login',
         builder: (context, state) => const CustomerLoginScreen(),
@@ -36,8 +56,37 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const CustomerRegisterScreen(),
       ),
       GoRoute(
-        path: '/home',
-        builder: (context, state) => const CustomerHomeScreen(),
+        path: '/',
+        builder: (context, state) => const HomeNavigationScreen(),
+      ),
+      GoRoute(
+        path: '/branch/:id',
+        builder: (context, state) {
+          final branch = state.extra as BranchModel;
+          return BranchDetailScreen(branch: branch);
+        },
+      ),
+      GoRoute(
+        path: '/join/:serviceId',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>;
+          return JoinQueueScreen(
+            service: extra['service'] as BranchServiceModel,
+            branch: extra['branch'] as BranchModel,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/ticket/:id',
+        builder: (context, state) {
+          final ticketId = state.pathParameters['id']!;
+          final ticket = state.extra as TicketModel?;
+          return DigitalTicketScreen(ticketId: ticketId, initialTicket: ticket);
+        },
+      ),
+      GoRoute(
+        path: '/history',
+        builder: (context, state) => const TicketHistoryScreen(),
       ),
     ],
   );
@@ -45,7 +94,6 @@ final routerProvider = Provider<GoRouter>((ref) {
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  // Configure default base URL for local testing
   ApiClient.setBaseUrl('http://127.0.0.1:5000/api/v1');
 
   runApp(
@@ -78,127 +126,6 @@ class QueueLessCustomerApp extends ConsumerWidget {
           backgroundColor: Color(0xFF4F46E5),
           foregroundColor: Colors.white,
           centerTitle: true,
-        ),
-      ),
-    );
-  }
-}
-
-class CustomerHomeScreen extends ConsumerWidget {
-  const CustomerHomeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authStateProvider);
-    final user = authState.user;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('QueueLess', style: TextStyle(fontWeight: FontWeight.bold)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout_rounded),
-            tooltip: 'Sign Out',
-            onPressed: () async {
-              await ref.read(authStateProvider.notifier).logout();
-              if (context.mounted) {
-                context.go('/login');
-              }
-            },
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // User greeting card
-              Container(
-                padding: const EdgeInsets.all(20.0),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF4F46E5), Color(0xFF3730A3)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF4F46E5).withOpacity(0.3),
-                      blurRadius: 16,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 26,
-                      backgroundColor: Colors.white.withOpacity(0.2),
-                      child: Text(
-                        (user?.fullName.isNotEmpty ?? false) ? user!.fullName[0].toUpperCase() : 'C',
-                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Hello, ${user?.fullName ?? 'Customer'}',
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            user?.email ?? '',
-                            style: const TextStyle(fontSize: 12, color: Color(0xFFE0E7FF)),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 28),
-
-              const Text(
-                'Account & Session Status',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
-              ),
-              const SizedBox(height: 12),
-
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.verified_user_rounded, color: Colors.green, size: 24),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Authentication Active', style: TextStyle(fontWeight: FontWeight.bold)),
-                              Text('Role: ${user?.role ?? 'CUSTOMER'} • JWT Bearer Attached', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

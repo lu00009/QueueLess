@@ -1,10 +1,17 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mobile/main.dart';
 import 'package:mobile/features/auth/providers/auth_provider.dart';
 import 'package:mobile/features/auth/models/auth_state.dart';
+import 'package:mobile/features/discovery/providers/discovery_provider.dart';
+import 'package:mobile/features/ticket/providers/ticket_provider.dart';
 
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({'onboarding_completed': true});
+  });
+
   testWidgets('QueueLessCustomerApp smoke test', (WidgetTester tester) async {
     final fakeUser = UserModel(
       id: 'cust-123',
@@ -19,6 +26,8 @@ void main() {
           authStateProvider.overrideWith((ref) => AuthNotifierFake(
             AuthState(isLoading: false, user: fakeUser, accessToken: 'token_123'),
           )),
+          branchDiscoveryProvider('').overrideWith((ref) => Future.value([])),
+          activeTicketsProvider.overrideWith((ref) => Future.value([])),
         ],
         child: const QueueLessCustomerApp(),
       ),
@@ -26,8 +35,9 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('QueueLess'), findsWidgets);
-    expect(find.text('Hello, John Doe'), findsOneWidget);
+    expect(find.text('Discover Facilities'), findsOneWidget);
+    expect(find.text('Explore'), findsOneWidget);
+    expect(find.text('My Tickets'), findsOneWidget);
   });
 }
 

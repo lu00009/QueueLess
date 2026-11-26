@@ -1,11 +1,17 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mobile/main.dart';
 import 'package:mobile/features/auth/providers/auth_provider.dart';
 import 'package:mobile/features/auth/models/auth_state.dart';
+import 'package:mobile/features/discovery/providers/discovery_provider.dart';
+import 'package:mobile/features/ticket/providers/ticket_provider.dart';
 
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({'onboarding_completed': true});
+  });
+
   testWidgets('Customer sees Login Screen when unauthenticated', (WidgetTester tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -25,7 +31,7 @@ void main() {
     expect(find.text('Fill Demo Customer'), findsOneWidget);
   });
 
-  testWidgets('Customer sees Home Screen when authenticated', (WidgetTester tester) async {
+  testWidgets('Customer sees Explore & Discovery when authenticated', (WidgetTester tester) async {
     final fakeUser = UserModel(
       id: 'cust-123',
       email: 'customer@example.com',
@@ -39,6 +45,8 @@ void main() {
           authStateProvider.overrideWith((ref) => AuthNotifierFake(
             AuthState(isLoading: false, user: fakeUser, accessToken: 'dummy_token'),
           )),
+          branchDiscoveryProvider('').overrideWith((ref) => Future.value([])),
+          activeTicketsProvider.overrideWith((ref) => Future.value([])),
         ],
         child: const QueueLessCustomerApp(),
       ),
@@ -46,9 +54,10 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Hello, Alice Walker'), findsOneWidget);
-    expect(find.text('customer@example.com'), findsOneWidget);
-    expect(find.text('Authentication Active'), findsOneWidget);
+    expect(find.text('Discover Facilities'), findsOneWidget);
+    expect(find.text('Explore'), findsOneWidget);
+    expect(find.text('My Tickets'), findsOneWidget);
+    expect(find.text('Profile'), findsOneWidget);
   });
 }
 
