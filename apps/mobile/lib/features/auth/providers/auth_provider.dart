@@ -39,6 +39,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await logout();
       }
     } catch (e) {
+      if (e is DioException && (e.response?.statusCode == 401 || e.response?.statusCode == 403)) {
+        await logout();
+        return;
+      }
       // Offline fallback: if token exists, keep session for offline ticket view
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('access_token');
@@ -88,7 +92,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
       return true;
     } on DioException catch (e) {
-      final msg = e.response?.data?['error']?['message'] ?? 'Login failed. Please check your credentials.';
+      String msg;
+      if (e.type == DioExceptionType.connectionTimeout || e.type == DioExceptionType.receiveTimeout || e.type == DioExceptionType.sendTimeout) {
+        msg = 'Connection timed out. The backend server is waking up, please retry in a moment.';
+      } else if (e.response?.statusCode == 401) {
+        msg = e.response?.data?['error']?['message'] ?? 'Invalid email or password.';
+      } else if (e.response?.data?['error']?['message'] != null) {
+        msg = e.response!.data['error']['message'];
+      } else {
+        msg = 'Connection error. Please try again.';
+      }
       state = state.copyWith(isLoading: false, error: msg);
       return false;
     } catch (e) {

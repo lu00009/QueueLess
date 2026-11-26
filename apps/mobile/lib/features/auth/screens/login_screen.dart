@@ -36,8 +36,10 @@ class _CustomerLoginScreenState extends ConsumerState<CustomerLoginScreen> {
   }
 
   void _quickFill() {
-    _emailController.text = 'customer@example.com';
-    _passwordController.text = 'Password@123456';
+    setState(() {
+      _emailController.text = 'customer@example.com';
+      _passwordController.text = 'Password@123456';
+    });
   }
 
   @override

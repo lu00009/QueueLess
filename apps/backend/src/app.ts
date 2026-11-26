@@ -18,16 +18,11 @@ export function createApp(): Express {
   const app = express();
 
   // Security and utilities middleware
-  app.use(helmet());
+  app.use(helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  }));
   app.use(cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, curl, etc.)
-      if (!origin) return callback(null, true);
-      if (ENV.CORS_ORIGIN.indexOf(origin) !== -1 || origin.startsWith('http://localhost:')) {
-        return callback(null, true);
-      }
-      return callback(null, true); // Dev-friendly
-    },
+    origin: true,
     credentials: true,
   }));
   app.use(morgan(ENV.NODE_ENV === 'development' ? 'dev' : 'combined'));
