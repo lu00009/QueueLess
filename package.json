@@ -7,6 +7,8 @@
     "packages/*"
   ],
   "scripts": {
+    "build": "npm run build:types && npx prisma generate --schema=apps/backend/prisma/schema.prisma && npm run build:backend",
+    "start": "node apps/backend/dist/server.js",
     "dev:backend": "npm --workspace=apps/backend run dev",
     "dev:web": "npm --workspace=apps/web run dev",
     "build:backend": "npm --workspace=apps/backend run build",
