@@ -12,7 +12,7 @@ export const adminAnalyticsRouter = Router();
 adminAnalyticsRouter.get(
   '/organizations/:id/audit-logs',
   authenticateToken,
-  requireOrgAccess([OrgRole.ORG_ADMIN, OrgRole.ORG_OWNER]),
+  requireOrgAccess([OrgRole.ORG_ADMIN, OrgRole.ORG_OWNER, OrgRole.ORG_STAFF]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const orgId = req.membership?.organizationId || req.params.id;
@@ -40,7 +40,7 @@ adminAnalyticsRouter.get(
 adminAnalyticsRouter.get(
   '/organizations/:id/analytics',
   authenticateToken,
-  requireOrgAccess([OrgRole.ORG_ADMIN, OrgRole.ORG_OWNER]),
+  requireOrgAccess([OrgRole.ORG_ADMIN, OrgRole.ORG_OWNER, OrgRole.ORG_STAFF]),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const orgId = req.membership?.organizationId || req.params.id;

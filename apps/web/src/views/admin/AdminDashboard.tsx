@@ -4,7 +4,6 @@ import { apiClient } from '../../api/client';
 import {
   ShieldCheck,
   Building2,
-  LogOut,
   MapPin,
   Clock,
   Layers,
@@ -18,7 +17,7 @@ import {
   CheckCircle2,
   Trash2,
   Power,
-  RefreshCw,
+  X,
 } from 'lucide-react';
 
 type Tab = 'overview' | 'branches' | 'services' | 'counters' | 'staff' | 'queues' | 'reports' | 'audit';
@@ -41,6 +40,7 @@ export const AdminDashboard: React.FC = () => {
   const [selectedBranchId, setSelectedBranchId] = useState<string>('');
 
   // Modals state
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [showBranchModal, setShowBranchModal] = useState(false);
   const [newBranchName, setNewBranchName] = useState('');
   const [newBranchCode, setNewBranchCode] = useState('');
@@ -100,10 +100,14 @@ export const AdminDashboard: React.FC = () => {
       }
 
       // 2. Fetch staff
-      const staffRes = await apiClient.get(`/organizations/${orgId}/staff`, {
-        headers: { 'X-Organization-Id': orgId },
-      });
-      setStaff(staffRes.data.data);
+      try {
+        const staffRes = await apiClient.get(`/organizations/${orgId}/staff`, {
+          headers: { 'X-Organization-Id': orgId },
+        });
+        setStaff(staffRes.data.data);
+      } catch (e) {
+        // graceful fallback if staff list is restricted
+      }
 
       // 3. Fetch branch resources if branch exists
       if (activeBId) {
@@ -123,8 +127,8 @@ export const AdminDashboard: React.FC = () => {
         setQueues(queueRes.data.data);
       }
 
-      // 4. Fetch Analytics and Audit logs
-      const [analyticsRes, auditRes] = await Promise.all([
+      // 4. Fetch Analytics and Audit logs gracefully
+      const [analyticsResult, auditResult] = await Promise.allSettled([
         apiClient.get(`/organizations/${orgId}/analytics`, {
           headers: { 'X-Organization-Id': orgId },
         }),
@@ -132,8 +136,13 @@ export const AdminDashboard: React.FC = () => {
           headers: { 'X-Organization-Id': orgId },
         }),
       ]);
-      setAnalytics(analyticsRes.data.data);
-      setAuditLogs(auditRes.data.data);
+
+      if (analyticsResult.status === 'fulfilled') {
+        setAnalytics(analyticsResult.value.data.data);
+      }
+      if (auditResult.status === 'fulfilled') {
+        setAuditLogs(auditResult.value.data.data);
+      }
     } catch (err: any) {
       showNotification(err.response?.data?.message || 'Error loading organization data', true);
     } finally {
@@ -145,7 +154,6 @@ export const AdminDashboard: React.FC = () => {
     loadData();
   }, [loadData]);
 
-  // Handler functions
   const handleCreateBranch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!orgId) return;
@@ -305,37 +313,38 @@ export const AdminDashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
-      {/* Top Header */}
-      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md px-6 py-3.5 flex items-center justify-between sticky top-0 z-30">
-        <div className="flex items-center space-x-4">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 ring-1 ring-white/10">
-            <ShieldCheck className="h-5 w-5 text-white" />
+    <div className="min-h-screen bg-[#FAFAF7] text-[#14201A] flex flex-col font-sans">
+      {/* Top Header - Simple & Professional */}
+      <header className="border-b border-[#E5E7EB] bg-white px-6 py-3.5 flex items-center justify-between sticky top-0 z-30">
+        <div className="flex items-center space-x-3.5">
+          <div className="h-10 w-10 rounded-[12px] bg-[#E8F3EC] text-[#1F5C3A] flex items-center justify-center">
+            <ShieldCheck className="h-5 w-5" />
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <h1 className="font-bold text-white text-base tracking-tight">QueueLess Administration Portal</h1>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+              <h1 className="font-semibold text-[#14201A] text-base tracking-tight">QueueLess Administration Portal</h1>
+              <span className="px-2 py-0.5 rounded-[8px] text-[11px] font-semibold bg-[#E8F3EC] text-[#1F5C3A]">
                 Admin
               </span>
             </div>
-            <p className="text-xs text-slate-400">
-              Tenant: <span className="font-semibold text-slate-200">{activeOrg?.organizationName || 'Global'}</span>
+            <p className="text-xs text-[#6B7A72]">
+              Tenant: <span className="font-medium text-[#14201A]">{activeOrg?.organizationName || 'Global'}</span>
             </p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-4">
+        {/* Header Right Actions */}
+        <div className="flex items-center space-x-3">
           {memberships.length > 1 && (
-            <div className="flex items-center space-x-2 bg-slate-800/80 border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs">
-              <Building2 className="h-4 w-4 text-indigo-400" />
+            <div className="flex items-center space-x-2 bg-white border border-[#E5E7EB] rounded-[12px] px-3 py-1.5 text-xs">
+              <Building2 className="h-3.5 w-3.5 text-[#6B7A72]" />
               <select
                 value={activeOrg?.organizationId || ''}
                 onChange={(e) => setActiveOrgId(e.target.value)}
-                className="bg-transparent text-white font-medium focus:outline-none cursor-pointer text-xs"
+                className="bg-transparent text-[#14201A] font-medium focus:outline-none cursor-pointer text-xs"
               >
                 {memberships.map((m) => (
-                  <option key={m.organizationId} value={m.organizationId} className="bg-slate-900 text-white">
+                  <option key={m.organizationId} value={m.organizationId}>
                     {m.organizationName}
                   </option>
                 ))}
@@ -343,35 +352,35 @@ export const AdminDashboard: React.FC = () => {
             </div>
           )}
 
+          {/* Profile Button */}
           <button
-            onClick={loadData}
-            title="Refresh Data"
-            className="p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition border border-slate-700/60"
+            onClick={() => setShowProfileModal(true)}
+            className="flex items-center space-x-2 px-3 py-1.5 rounded-[12px] border border-[#E5E7EB] bg-white hover:bg-[#E8F3EC] transition text-left"
+            title="Account Profile"
           >
-            <RefreshCw className={`h-4 w-4 ${actionLoading ? 'animate-spin' : ''}`} />
+            <div className="h-7 w-7 rounded-full bg-[#E8F3EC] text-[#1F5C3A] font-semibold text-xs flex items-center justify-center">
+              {user?.fullName ? user.fullName[0].toUpperCase() : 'U'}
+            </div>
+            <div className="hidden sm:block text-left">
+              <p className="text-xs font-semibold text-[#14201A] leading-tight">{user?.fullName || 'User'}</p>
+              <p className="text-[10px] text-[#6B7A72] leading-tight">{activeOrg?.role || user?.role || 'Staff'}</p>
+            </div>
           </button>
 
-          <div className="h-6 w-px bg-slate-800 hidden sm:block" />
-
-          <div className="text-right">
-            <p className="text-xs font-semibold text-white">{user?.fullName}</p>
-            <p className="text-[10px] text-slate-400">{activeOrg?.role || user?.role}</p>
-          </div>
-
+          {/* Logout Text Button - Clean & Professional (No Icon) */}
           <button
             onClick={() => logout()}
-            title="Sign Out"
-            className="p-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition"
+            className="px-4 py-2 rounded-[12px] text-xs font-semibold text-[#14201A] bg-white border border-[#E5E7EB] hover:bg-[#E8F3EC] hover:border-[#1F5C3A] transition"
           >
-            <LogOut className="h-4 w-4" />
+            Logout
           </button>
         </div>
       </header>
 
       {/* Admin Tabs Navigation */}
-      <div className="border-b border-slate-800 bg-slate-900/40 px-6 sticky top-[57px] z-20 backdrop-blur-md">
+      <div className="border-b border-[#E5E7EB] bg-[#FAFAF7] px-6 sticky top-[57px] z-20">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <nav className="flex space-x-1.5 py-2.5 overflow-x-auto">
+          <nav className="flex space-x-1 py-2 overflow-x-auto">
             {[
               { id: 'overview', label: 'Overview', icon: Activity },
               { id: 'branches', label: 'Branches', icon: MapPin },
@@ -388,10 +397,10 @@ export const AdminDashboard: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => setCurrentTab(tab.id as Tab)}
-                  className={`inline-flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition ${
+                  className={`inline-flex items-center space-x-2 px-3.5 py-2 rounded-[12px] text-xs font-semibold transition ${
                     isActive
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                      ? 'bg-[#1F5C3A] text-white shadow-sm'
+                      : 'text-[#6B7A72] hover:text-[#14201A] hover:bg-[#E8F3EC]'
                   }`}
                 >
                   <Icon className="h-3.5 w-3.5" />
@@ -405,21 +414,21 @@ export const AdminDashboard: React.FC = () => {
 
       {/* Notifications Toast */}
       {errorMsg && (
-        <div className="bg-rose-500/15 border-b border-rose-500/30 px-6 py-2.5 flex items-center justify-between text-xs text-rose-300">
+        <div className="bg-[#FEF2F2] border-b border-[#FCA5A5] px-6 py-2.5 flex items-center justify-between text-xs text-[#991B1B]">
           <div className="flex items-center space-x-2">
-            <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" />
+            <AlertCircle className="h-4 w-4 text-[#DC2626] shrink-0" />
             <span>{errorMsg}</span>
           </div>
-          <button onClick={() => setErrorMsg(null)} className="text-rose-400 hover:text-rose-200">✕</button>
+          <button onClick={() => setErrorMsg(null)} className="text-[#DC2626] hover:text-[#991B1B]">✕</button>
         </div>
       )}
       {successMsg && (
-        <div className="bg-emerald-500/15 border-b border-emerald-500/30 px-6 py-2.5 flex items-center justify-between text-xs text-emerald-300">
+        <div className="bg-[#E8F3EC] border-b border-[#A7D7B5] px-6 py-2.5 flex items-center justify-between text-xs text-[#1F5C3A]">
           <div className="flex items-center space-x-2">
-            <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+            <CheckCircle2 className="h-4 w-4 text-[#1F5C3A] shrink-0" />
             <span>{successMsg}</span>
           </div>
-          <button onClick={() => setSuccessMsg(null)} className="text-emerald-400 hover:text-emerald-200">✕</button>
+          <button onClick={() => setSuccessMsg(null)} className="text-[#1F5C3A] hover:text-[#14201A]">✕</button>
         </div>
       )}
 
@@ -427,14 +436,14 @@ export const AdminDashboard: React.FC = () => {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
         {/* Branch Context Selector (for branch-specific views) */}
         {['services', 'counters', 'queues'].includes(currentTab) && (
-          <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-900/80 border border-slate-800">
+          <div className="flex items-center justify-between p-4 rounded-[16px] bg-white border border-[#E5E7EB]">
             <div className="flex items-center space-x-3">
-              <MapPin className="h-4 w-4 text-indigo-400" />
-              <span className="text-xs font-semibold text-slate-300">Managing Branch:</span>
+              <MapPin className="h-4 w-4 text-[#1F5C3A]" />
+              <span className="text-xs font-semibold text-[#14201A]">Managing Branch:</span>
               <select
                 value={selectedBranchId}
                 onChange={(e) => setSelectedBranchId(e.target.value)}
-                className="bg-slate-800 border border-slate-700 text-white text-xs rounded-xl px-3 py-1.5 outline-none font-medium"
+                className="bg-white border border-[#E5E7EB] text-[#14201A] text-xs rounded-[12px] px-3 py-1.5 outline-none font-medium"
               >
                 {branches.map((b) => (
                   <option key={b.id} value={b.id}>
@@ -443,7 +452,7 @@ export const AdminDashboard: React.FC = () => {
                 ))}
               </select>
             </div>
-            <div className="text-xs text-slate-400">
+            <div className="text-xs text-[#6B7A72]">
               {counters.length} Counters • {services.length} Services • {queues.length} Active Queues
             </div>
           </div>
@@ -454,50 +463,51 @@ export const AdminDashboard: React.FC = () => {
           <div className="space-y-6">
             {/* Top Stat Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-lg">
-                <span className="text-xs text-slate-400 font-semibold uppercase">Total Branches</span>
-                <p className="text-3xl font-extrabold text-white mt-2">{branches.length}</p>
-                <span className="text-[10px] text-emerald-400 mt-1 block">Active service locations</span>
+              <div className="p-5 rounded-[16px] bg-white border border-[#E5E7EB]">
+                <span className="text-xs text-[#6B7A72] font-semibold uppercase">Total Branches</span>
+                <p className="text-3xl font-semibold text-[#14201A] mt-2">{branches.length}</p>
+                <span className="text-xs text-[#1F5C3A] mt-1 block">Active service locations</span>
               </div>
-              <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-lg">
-                <span className="text-xs text-slate-400 font-semibold uppercase">Staff Members</span>
-                <p className="text-3xl font-extrabold text-indigo-400 mt-2">{staff.length}</p>
-                <span className="text-[10px] text-slate-400 mt-1 block">Assigned operators & admins</span>
+              <div className="p-5 rounded-[16px] bg-white border border-[#E5E7EB]">
+                <span className="text-xs text-[#6B7A72] font-semibold uppercase">Staff Members</span>
+                <p className="text-3xl font-semibold text-[#14201A] mt-2">{staff.length}</p>
+                <span className="text-xs text-[#6B7A72] mt-1 block">Assigned operators & admins</span>
               </div>
-              <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-lg">
-                <span className="text-xs text-slate-400 font-semibold uppercase">Tickets Issued</span>
-                <p className="text-3xl font-extrabold text-sky-400 mt-2">{analytics?.summary?.totalTicketsIssued || 0}</p>
-                <span className="text-[10px] text-sky-400 mt-1 block">Across all active branches</span>
+              <div className="p-5 rounded-[16px] bg-white border border-[#E5E7EB]">
+                <span className="text-xs text-[#6B7A72] font-semibold uppercase">Tickets Issued</span>
+                <p className="text-3xl font-semibold text-[#14201A] mt-2">{analytics?.summary?.totalTicketsIssued || 0}</p>
+                <span className="text-xs text-[#6B7A72] mt-1 block">Across all active branches</span>
               </div>
-              <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-lg">
-                <span className="text-xs text-slate-400 font-semibold uppercase">Average Service Time</span>
-                <p className="text-3xl font-extrabold text-emerald-400 mt-2">
-                  {analytics?.summary?.avgServiceMinutes || 0} <span className="text-sm font-normal text-slate-400">min</span>
+              <div className="p-5 rounded-[16px] bg-white border border-[#E5E7EB]">
+                <span className="text-xs text-[#6B7A72] font-semibold uppercase">Average Service Time</span>
+                <p className="text-3xl font-semibold text-[#14201A] mt-2">
+                  {analytics?.summary?.avgServiceMinutes || 0} <span className="text-sm font-normal text-[#6B7A72]">min</span>
                 </p>
-                <span className="text-[10px] text-slate-400 mt-1 block">Completed visit average</span>
+                <span className="text-xs text-[#6B7A72] mt-1 block">Completed visit average</span>
               </div>
             </div>
 
             {/* Overview Quick Actions & Status */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              <div className="lg:col-span-8 p-6 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-4">
+              <div className="lg:col-span-8 p-6 rounded-[16px] bg-white border border-[#E5E7EB] space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-white text-base">Branch Operations Snapshot</h3>
+                  <h3 className="font-semibold text-[#14201A] text-base">Branch Operations Snapshot</h3>
                   <button
                     onClick={() => setCurrentTab('branches')}
-                    className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold"
+                    className="text-xs text-[#1F5C3A] hover:underline font-semibold"
                   >
                     View All Branches →
                   </button>
                 </div>
-                <div className="divide-y divide-slate-800/80">
+                <div className="divide-y divide-[#E5E7EB]">
                   {branches.map((b) => (
                     <div key={b.id} className="py-3.5 flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-semibold text-white">{b.name}</p>
-                        <p className="text-xs text-slate-400">{b.address || 'Standard Location'} • Code: {b.code}</p>
+                        <p className="text-sm font-semibold text-[#14201A]">{b.name}</p>
+                        <p className="text-xs text-[#6B7A72]">{b.address || 'Standard Location'} • Code: {b.code}</p>
                       </div>
-                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      {/* One small lime accent for operational state */}
+                      <span className="px-2.5 py-1 rounded-[8px] text-xs font-semibold bg-[#B7E36B] text-[#14201A]">
                         Operational
                       </span>
                     </div>
@@ -505,28 +515,28 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div className="lg:col-span-4 p-6 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-4">
-                <h3 className="font-bold text-white text-base">Quick Administrative Tasks</h3>
+              <div className="lg:col-span-4 p-6 rounded-[16px] bg-white border border-[#E5E7EB] space-y-4">
+                <h3 className="font-semibold text-[#14201A] text-base">Quick Administrative Tasks</h3>
                 <div className="space-y-2.5">
                   <button
                     onClick={() => setShowBranchModal(true)}
-                    className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition flex items-center space-x-2 border border-slate-700/80"
+                    className="w-full py-2.5 px-4 rounded-[12px] bg-[#FAFAF7] hover:bg-[#E8F3EC] text-[#14201A] text-xs font-semibold transition flex items-center space-x-2 border border-[#E5E7EB]"
                   >
-                    <Plus className="h-4 w-4 text-indigo-400" />
+                    <Plus className="h-4 w-4 text-[#1F5C3A]" />
                     <span>Create New Branch</span>
                   </button>
                   <button
                     onClick={() => setShowStaffModal(true)}
-                    className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition flex items-center space-x-2 border border-slate-700/80"
+                    className="w-full py-2.5 px-4 rounded-[12px] bg-[#FAFAF7] hover:bg-[#E8F3EC] text-[#14201A] text-xs font-semibold transition flex items-center space-x-2 border border-[#E5E7EB]"
                   >
-                    <Users className="h-4 w-4 text-sky-400" />
+                    <Users className="h-4 w-4 text-[#1F5C3A]" />
                     <span>Invite Staff Member</span>
                   </button>
                   <button
                     onClick={() => setCurrentTab('reports')}
-                    className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition flex items-center space-x-2 border border-slate-700/80"
+                    className="w-full py-2.5 px-4 rounded-[12px] bg-[#FAFAF7] hover:bg-[#E8F3EC] text-[#14201A] text-xs font-semibold transition flex items-center space-x-2 border border-[#E5E7EB]"
                   >
-                    <BarChart3 className="h-4 w-4 text-emerald-400" />
+                    <BarChart3 className="h-4 w-4 text-[#1F5C3A]" />
                     <span>Generate Operational Report</span>
                   </button>
                 </div>
@@ -540,12 +550,12 @@ export const AdminDashboard: React.FC = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-white">Facility Branches</h2>
-                <p className="text-xs text-slate-400">Manage physical service centers, operating hours, and location data.</p>
+                <h2 className="text-lg font-semibold text-[#14201A]">Facility Branches</h2>
+                <p className="text-xs text-[#6B7A72]">Manage physical service centers, operating hours, and location data.</p>
               </div>
               <button
                 onClick={() => setShowBranchModal(true)}
-                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition flex items-center space-x-1.5 shadow-md shadow-indigo-600/30"
+                className="px-4 py-2 rounded-[12px] bg-[#1F5C3A] hover:bg-[#18472D] text-white text-xs font-semibold transition flex items-center space-x-1.5 shadow-sm"
               >
                 <Plus className="h-4 w-4" />
                 <span>Add Branch</span>
@@ -554,28 +564,28 @@ export const AdminDashboard: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {branches.map((b) => (
-                <div key={b.id} className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-lg space-y-3">
+                <div key={b.id} className="p-5 rounded-[16px] bg-white border border-[#E5E7EB] space-y-3">
                   <div className="flex items-start justify-between">
                     <div>
-                      <h3 className="font-bold text-white text-sm">{b.name}</h3>
-                      <span className="font-mono text-xs text-indigo-400">Code: {b.code}</span>
+                      <h3 className="font-semibold text-[#14201A] text-sm">{b.name}</h3>
+                      <span className="font-mono text-xs text-[#6B7A72]">Code: {b.code}</span>
                     </div>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <span className="px-2 py-0.5 rounded-[8px] text-[10px] font-semibold bg-[#E8F3EC] text-[#1F5C3A]">
                       {b.isActive ? 'Active' : 'Suspended'}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400 flex items-center space-x-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+                  <p className="text-xs text-[#6B7A72] flex items-center space-x-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-[#6B7A72] shrink-0" />
                     <span>{b.address || 'Address not configured'}</span>
                   </p>
-                  <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                  <div className="pt-2 border-t border-[#E5E7EB] flex items-center justify-between text-xs text-[#6B7A72]">
                     <span>{b.phone || 'No phone'}</span>
                     <button
                       onClick={() => {
                         setSelectedBranchId(b.id);
                         setCurrentTab('services');
                       }}
-                      className="text-indigo-400 hover:text-indigo-300 font-semibold"
+                      className="text-[#1F5C3A] hover:underline font-semibold"
                     >
                       Manage Services →
                     </button>
@@ -591,21 +601,21 @@ export const AdminDashboard: React.FC = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-white">Department Services</h2>
-                <p className="text-xs text-slate-400">Create customer service offerings with automatic queue provisioning.</p>
+                <h2 className="text-lg font-semibold text-[#14201A]">Department Services</h2>
+                <p className="text-xs text-[#6B7A72]">Create customer service offerings with automatic queue provisioning.</p>
               </div>
               <button
                 onClick={() => setShowServiceModal(true)}
-                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition flex items-center space-x-1.5 shadow-md shadow-indigo-600/30"
+                className="px-4 py-2 rounded-[12px] bg-[#1F5C3A] hover:bg-[#18472D] text-white text-xs font-semibold transition flex items-center space-x-1.5 shadow-sm"
               >
                 <Plus className="h-4 w-4" />
                 <span>Add Service</span>
               </button>
             </div>
 
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+            <div className="bg-white border border-[#E5E7EB] rounded-[16px] overflow-hidden">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-950/60 border-b border-slate-800 text-slate-400 font-semibold uppercase">
+                <thead className="bg-[#FAFAF7] border-b border-[#E5E7EB] text-[#6B7A72] font-semibold uppercase">
                   <tr>
                     <th className="p-4">Service Name</th>
                     <th className="p-4">Code</th>
@@ -614,19 +624,19 @@ export const AdminDashboard: React.FC = () => {
                     <th className="p-4">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-[#E5E7EB]">
                   {services.map((s) => (
-                    <tr key={s.id} className="hover:bg-slate-800/40 transition">
-                      <td className="p-4 font-semibold text-white">{s.name}</td>
-                      <td className="p-4 font-mono text-indigo-400">{s.code}</td>
-                      <td className="p-4 text-slate-300">{s.estimatedDurationMinutes} minutes</td>
+                    <tr key={s.id} className="hover:bg-[#FAFAF7] transition">
+                      <td className="p-4 font-semibold text-[#14201A]">{s.name}</td>
+                      <td className="p-4 font-mono text-[#1F5C3A] font-semibold">{s.code}</td>
+                      <td className="p-4 text-[#6B7A72]">{s.estimatedDurationMinutes} minutes</td>
                       <td className="p-4">
-                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                        <span className="px-2 py-0.5 rounded-[8px] text-[10px] font-semibold bg-[#E8F3EC] text-[#1F5C3A]">
                           Tier {s.priorityLevel}
                         </span>
                       </td>
                       <td className="p-4">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <span className="px-2 py-0.5 rounded-[8px] text-[10px] font-semibold bg-[#E8F3EC] text-[#1F5C3A]">
                           {s.isActive ? 'Active' : 'Disabled'}
                         </span>
                       </td>
@@ -643,12 +653,12 @@ export const AdminDashboard: React.FC = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-white">Physical & Virtual Service Counters</h2>
-                <p className="text-xs text-slate-400">Configure operator stations, status, and supported services.</p>
+                <h2 className="text-lg font-semibold text-[#14201A]">Service Counters</h2>
+                <p className="text-xs text-[#6B7A72]">Configure operator stations, status, and supported services.</p>
               </div>
               <button
                 onClick={() => setShowCounterModal(true)}
-                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition flex items-center space-x-1.5 shadow-md shadow-indigo-600/30"
+                className="px-4 py-2 rounded-[12px] bg-[#1F5C3A] hover:bg-[#18472D] text-white text-xs font-semibold transition flex items-center space-x-1.5 shadow-sm"
               >
                 <Plus className="h-4 w-4" />
                 <span>Add Counter</span>
@@ -657,23 +667,23 @@ export const AdminDashboard: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {counters.map((c) => (
-                <div key={c.id} className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-lg space-y-3">
+                <div key={c.id} className="p-5 rounded-[16px] bg-white border border-[#E5E7EB] space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-bold text-slate-400">Counter #{c.number}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                    <span className="font-mono text-xs font-semibold text-[#6B7A72]">Counter #{c.number}</span>
+                    <span className={`px-2 py-0.5 rounded-[8px] text-[10px] font-semibold ${
                       c.status === 'SERVING'
-                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                        ? 'bg-[#E8F3EC] text-[#1F5C3A]'
                         : c.status === 'IDLE'
-                        ? 'bg-sky-500/15 text-sky-400 border border-sky-500/30'
-                        : 'bg-slate-800 text-slate-400 border border-slate-700'
+                        ? 'bg-[#E8F3EC] text-[#1F5C3A]'
+                        : 'bg-gray-100 text-[#6B7A72]'
                     }`}>
                       {c.status}
                     </span>
                   </div>
-                  <h3 className="font-bold text-white text-base">{c.name}</h3>
-                  <div className="text-xs text-slate-400 space-y-1">
-                    <p>Current Operator: <strong className="text-slate-200">{c.currentStaff?.fullName || 'Unassigned'}</strong></p>
-                    <p>Supported Services: <span className="text-indigo-400">{c.supportedServices?.length || 0} configured</span></p>
+                  <h3 className="font-semibold text-[#14201A] text-base">{c.name}</h3>
+                  <div className="text-xs text-[#6B7A72] space-y-1">
+                    <p>Current Operator: <strong className="text-[#14201A]">{c.currentStaff?.fullName || 'Unassigned'}</strong></p>
+                    <p>Supported Services: <span className="text-[#1F5C3A] font-semibold">{c.supportedServices?.length || 0} configured</span></p>
                   </div>
                 </div>
               ))}
@@ -686,21 +696,21 @@ export const AdminDashboard: React.FC = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-white">Team Members & Role Access</h2>
-                <p className="text-xs text-slate-400">Invite operators, grant RBAC permissions, and review memberships.</p>
+                <h2 className="text-lg font-semibold text-[#14201A]">Team Members & Role Access</h2>
+                <p className="text-xs text-[#6B7A72]">Invite operators, grant RBAC permissions, and review memberships.</p>
               </div>
               <button
                 onClick={() => setShowStaffModal(true)}
-                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition flex items-center space-x-1.5 shadow-md shadow-indigo-600/30"
+                className="px-4 py-2 rounded-[12px] bg-[#1F5C3A] hover:bg-[#18472D] text-white text-xs font-semibold transition flex items-center space-x-1.5 shadow-sm"
               >
                 <Plus className="h-4 w-4" />
                 <span>Invite Staff</span>
               </button>
             </div>
 
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+            <div className="bg-white border border-[#E5E7EB] rounded-[16px] overflow-hidden">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-950/60 border-b border-slate-800 text-slate-400 font-semibold uppercase">
+                <thead className="bg-[#FAFAF7] border-b border-[#E5E7EB] text-[#6B7A72] font-semibold uppercase">
                   <tr>
                     <th className="p-4">Name</th>
                     <th className="p-4">Email</th>
@@ -709,18 +719,18 @@ export const AdminDashboard: React.FC = () => {
                     <th className="p-4 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-[#E5E7EB]">
                   {staff.map((m) => (
-                    <tr key={m.id} className="hover:bg-slate-800/40 transition">
-                      <td className="p-4 font-semibold text-white">{m.user?.fullName}</td>
-                      <td className="p-4 text-slate-300 font-mono">{m.user?.email}</td>
+                    <tr key={m.id} className="hover:bg-[#FAFAF7] transition">
+                      <td className="p-4 font-semibold text-[#14201A]">{m.user?.fullName}</td>
+                      <td className="p-4 text-[#6B7A72] font-mono">{m.user?.email}</td>
                       <td className="p-4">
-                        <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                        <span className="px-2.5 py-1 rounded-[8px] text-[10px] font-semibold bg-[#E8F3EC] text-[#1F5C3A]">
                           {m.role}
                         </span>
                       </td>
                       <td className="p-4">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <span className="px-2 py-0.5 rounded-[8px] text-[10px] font-semibold bg-[#E8F3EC] text-[#1F5C3A]">
                           {m.status}
                         </span>
                       </td>
@@ -728,7 +738,7 @@ export const AdminDashboard: React.FC = () => {
                         {m.role !== 'ORG_OWNER' && (
                           <button
                             onClick={() => handleRemoveStaff(m.user?.id)}
-                            className="p-1.5 rounded-lg text-rose-400 hover:bg-rose-500/20 transition"
+                            className="p-1.5 rounded-[8px] text-red-600 hover:bg-red-50 transition"
                             title="Remove staff member"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -748,25 +758,25 @@ export const AdminDashboard: React.FC = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-white">Queue Rules & Policies</h2>
-                <p className="text-xs text-slate-400">Configure remote join policies, wait capacities, and pause/open controls.</p>
+                <h2 className="text-lg font-semibold text-[#14201A]">Queue Rules & Policies</h2>
+                <p className="text-xs text-[#6B7A72]">Configure remote join policies, wait capacities, and pause/open controls.</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {queues.map((q) => (
-                <div key={q.id} className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-lg space-y-4">
+                <div key={q.id} className="p-5 rounded-[16px] bg-white border border-[#E5E7EB] space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-bold text-white text-base">{q.service?.name}</h3>
-                      <span className="font-mono text-xs text-slate-400">Prefix: {q.prefix || 'Auto'}</span>
+                      <h3 className="font-semibold text-[#14201A] text-base">{q.service?.name}</h3>
+                      <span className="font-mono text-xs text-[#6B7A72]">Prefix: {q.prefix || 'Auto'}</span>
                     </div>
                     <button
                       onClick={() => handleToggleQueueStatus(q.id, q.status)}
-                      className={`px-3 py-1 rounded-full text-xs font-bold transition flex items-center space-x-1.5 ${
+                      className={`px-3 py-1 rounded-[8px] text-xs font-semibold transition flex items-center space-x-1.5 ${
                         q.status === 'OPEN'
-                          ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25'
-                          : 'bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25'
+                          ? 'bg-[#E8F3EC] text-[#1F5C3A] hover:bg-[#D0E6D8]'
+                          : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
                       }`}
                     >
                       <Power className="h-3 w-3" />
@@ -774,22 +784,22 @@ export const AdminDashboard: React.FC = () => {
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-xs text-slate-300 p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
+                  <div className="grid grid-cols-2 gap-2 text-xs text-[#6B7A72] p-3 rounded-[12px] bg-[#FAFAF7] border border-[#E5E7EB]">
                     <div>
-                      <span className="text-[10px] text-slate-500 block">Waiting Count</span>
-                      <strong className="text-white">{q._count?.tickets || 0} customers</strong>
+                      <span className="text-[10px] text-[#6B7A72] block">Waiting Count</span>
+                      <strong className="text-[#14201A]">{q._count?.tickets || 0} customers</strong>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-500 block">Max Capacity</span>
-                      <strong className="text-white">{q.configuration?.maxWaitingCapacity || 100}</strong>
+                      <span className="text-[10px] text-[#6B7A72] block">Max Capacity</span>
+                      <strong className="text-[#14201A]">{q.configuration?.maxWaitingCapacity || 100}</strong>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-500 block">Buffer Time</span>
-                      <strong className="text-white">{q.configuration?.bufferMinutes || 5} min</strong>
+                      <span className="text-[10px] text-[#6B7A72] block">Buffer Time</span>
+                      <strong className="text-[#14201A]">{q.configuration?.bufferMinutes || 5} min</strong>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-500 block">Remote Join</span>
-                      <strong className="text-emerald-400">{q.configuration?.allowRemoteJoin ? 'Enabled' : 'Disabled'}</strong>
+                      <span className="text-[10px] text-[#6B7A72] block">Remote Join</span>
+                      <strong className="text-[#1F5C3A]">{q.configuration?.allowRemoteJoin ? 'Enabled' : 'Disabled'}</strong>
                     </div>
                   </div>
 
@@ -801,7 +811,7 @@ export const AdminDashboard: React.FC = () => {
                       setAllowRemote(q.configuration?.allowRemoteJoin ?? true);
                       setShowQueueConfigModal(true);
                     }}
-                    className="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 hover:text-white transition border border-slate-700"
+                    className="w-full py-2 rounded-[12px] bg-white hover:bg-[#E8F3EC] text-xs font-semibold text-[#14201A] transition border border-[#E5E7EB]"
                   >
                     Edit Queue Configuration
                   </button>
@@ -816,49 +826,49 @@ export const AdminDashboard: React.FC = () => {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-white">Performance Reports & Analytics</h2>
-                <p className="text-xs text-slate-400">Historical queue volumes, wait time trends, and status distribution.</p>
+                <h2 className="text-lg font-semibold text-[#14201A]">Performance Reports & Analytics</h2>
+                <p className="text-xs text-[#6B7A72]">Historical queue volumes, wait time trends, and status distribution.</p>
               </div>
             </div>
 
             {/* Status Breakdown Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800">
-                <span className="text-xs text-slate-400 font-semibold uppercase">Total Completed Visits</span>
-                <p className="text-3xl font-extrabold text-emerald-400 mt-2">
+              <div className="p-5 rounded-[16px] bg-white border border-[#E5E7EB]">
+                <span className="text-xs text-[#6B7A72] font-semibold uppercase">Total Completed Visits</span>
+                <p className="text-3xl font-semibold text-[#14201A] mt-2">
                   {analytics.summary.completedTicketsCount}
                 </p>
-                <span className="text-[10px] text-slate-400 mt-1 block">Successfully served</span>
+                <span className="text-xs text-[#1F5C3A] mt-1 block">Successfully served</span>
               </div>
-              <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800">
-                <span className="text-xs text-slate-400 font-semibold uppercase">Average Handling Time</span>
-                <p className="text-3xl font-extrabold text-indigo-400 mt-2">
+              <div className="p-5 rounded-[16px] bg-white border border-[#E5E7EB]">
+                <span className="text-xs text-[#6B7A72] font-semibold uppercase">Average Handling Time</span>
+                <p className="text-3xl font-semibold text-[#14201A] mt-2">
                   {analytics.summary.avgServiceMinutes} min
                 </p>
-                <span className="text-[10px] text-slate-400 mt-1 block">Per customer consultation</span>
+                <span className="text-xs text-[#6B7A72] mt-1 block">Per customer consultation</span>
               </div>
-              <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800">
-                <span className="text-xs text-slate-400 font-semibold uppercase">Active Counter Fleet</span>
-                <p className="text-3xl font-extrabold text-sky-400 mt-2">
+              <div className="p-5 rounded-[16px] bg-white border border-[#E5E7EB]">
+                <span className="text-xs text-[#6B7A72] font-semibold uppercase">Active Counter Fleet</span>
+                <p className="text-3xl font-semibold text-[#14201A] mt-2">
                   {analytics.summary.totalCounters}
                 </p>
-                <span className="text-[10px] text-slate-400 mt-1 block">Provisioned service counters</span>
+                <span className="text-xs text-[#6B7A72] mt-1 block">Provisioned service counters</span>
               </div>
             </div>
 
             {/* Service Volume Breakdown */}
-            <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-4">
-              <h3 className="font-bold text-white text-base">Service Volume Breakdown</h3>
+            <div className="p-6 rounded-[16px] bg-white border border-[#E5E7EB] space-y-4">
+              <h3 className="font-semibold text-[#14201A] text-base">Service Volume Breakdown</h3>
               <div className="space-y-3">
-                {analytics.servicePerformance.map((sp: any) => (
+                {analytics.servicePerformance?.map((sp: any) => (
                   <div key={sp.code} className="space-y-1">
                     <div className="flex justify-between text-xs">
-                      <span className="text-slate-300 font-semibold">{sp.name} ({sp.code})</span>
-                      <span className="text-slate-400">{sp.ticketCount} tickets</span>
+                      <span className="text-[#14201A] font-medium">{sp.name} ({sp.code})</span>
+                      <span className="text-[#6B7A72]">{sp.ticketCount} tickets</span>
                     </div>
-                    <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+                    <div className="h-2 w-full bg-[#E5E7EB] rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-indigo-500 to-sky-500 rounded-full"
+                        className="h-full bg-[#1F5C3A] rounded-full"
                         style={{
                           width: `${Math.min(100, Math.max(10, (sp.ticketCount / (analytics.summary.totalTicketsIssued || 1)) * 100))}%`,
                         }}
@@ -876,14 +886,14 @@ export const AdminDashboard: React.FC = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-white">System Audit Trail</h2>
-                <p className="text-xs text-slate-400">Complete immutable record of all administrative, configuration, and security events.</p>
+                <h2 className="text-lg font-semibold text-[#14201A]">System Audit Trail</h2>
+                <p className="text-xs text-[#6B7A72]">Complete immutable record of administrative, configuration, and security events.</p>
               </div>
             </div>
 
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+            <div className="bg-white border border-[#E5E7EB] rounded-[16px] overflow-hidden">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-950/60 border-b border-slate-800 text-slate-400 font-semibold uppercase">
+                <thead className="bg-[#FAFAF7] border-b border-[#E5E7EB] text-[#6B7A72] font-semibold uppercase">
                   <tr>
                     <th className="p-4">Timestamp</th>
                     <th className="p-4">User</th>
@@ -892,28 +902,28 @@ export const AdminDashboard: React.FC = () => {
                     <th className="p-4">Entity ID</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-[#E5E7EB]">
                   {auditLogs.length > 0 ? (
                     auditLogs.map((log) => (
-                      <tr key={log.id} className="hover:bg-slate-800/40 transition">
-                        <td className="p-4 text-slate-400 font-mono">
+                      <tr key={log.id} className="hover:bg-[#FAFAF7] transition">
+                        <td className="p-4 text-[#6B7A72] font-mono">
                           {new Date(log.createdAt).toLocaleString()}
                         </td>
-                        <td className="p-4 text-white font-semibold">
+                        <td className="p-4 text-[#14201A] font-semibold">
                           {log.user?.fullName || log.user?.email || 'System'}
                         </td>
                         <td className="p-4">
-                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-800 text-indigo-300 border border-slate-700">
+                          <span className="px-2 py-0.5 rounded-[8px] text-[10px] font-semibold bg-[#E8F3EC] text-[#1F5C3A]">
                             {log.action}
                           </span>
                         </td>
-                        <td className="p-4 text-slate-300">{log.entityType}</td>
-                        <td className="p-4 font-mono text-slate-500">{log.entityId}</td>
+                        <td className="p-4 text-[#6B7A72]">{log.entityType}</td>
+                        <td className="p-4 font-mono text-[#6B7A72]">{log.entityId}</td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={5} className="p-8 text-center text-slate-500">
+                      <td colSpan={5} className="p-8 text-center text-[#6B7A72]">
                         No audit events recorded yet for this organization.
                       </td>
                     </tr>
@@ -925,55 +935,101 @@ export const AdminDashboard: React.FC = () => {
         )}
       </main>
 
+      {/* USER PROFILE MODAL */}
+      {showProfileModal && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-[#E5E7EB] rounded-[16px] max-w-sm w-full p-6 space-y-5 shadow-lg">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-[#14201A]">Account Profile</h3>
+              <button
+                onClick={() => setShowProfileModal(false)}
+                className="text-[#6B7A72] hover:text-[#14201A] p-1 rounded-[8px]"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="p-4 rounded-[12px] bg-[#E8F3EC] space-y-1">
+              <p className="text-sm font-semibold text-[#14201A]">{user?.fullName || 'Administrator'}</p>
+              <p className="text-xs text-[#6B7A72]">{user?.email}</p>
+              <p className="text-xs text-[#1F5C3A] font-medium pt-1">
+                Role: {activeOrg?.role || user?.role}
+              </p>
+            </div>
+
+            <div className="space-y-2 text-xs text-[#6B7A72]">
+              <div className="flex justify-between py-1 border-b border-[#E5E7EB]">
+                <span>Organization</span>
+                <span className="font-semibold text-[#14201A]">{activeOrg?.organizationName || 'Global'}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-[#E5E7EB]">
+                <span>User ID</span>
+                <span className="font-mono text-[#6B7A72]">{user?.id || '—'}</span>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end space-x-2">
+              <button
+                type="button"
+                onClick={() => setShowProfileModal(false)}
+                className="w-full py-2 rounded-[12px] text-xs font-semibold bg-[#FAFAF7] hover:bg-[#E8F3EC] text-[#14201A] border border-[#E5E7EB]"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* CREATE BRANCH MODAL */}
       {showBranchModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <form onSubmit={handleCreateBranch} className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <h3 className="text-base font-bold text-white">Create New Branch</h3>
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <form onSubmit={handleCreateBranch} className="bg-white border border-[#E5E7EB] rounded-[16px] max-w-md w-full p-6 space-y-4 shadow-lg">
+            <h3 className="text-base font-semibold text-[#14201A]">Create New Branch</h3>
             <div>
-              <label className="text-xs font-semibold text-slate-400 block mb-1">Branch Name</label>
+              <label className="text-xs font-semibold text-[#6B7A72] block mb-1">Branch Name</label>
               <input
                 type="text"
                 required
                 value={newBranchName}
                 onChange={(e) => setNewBranchName(e.target.value)}
                 placeholder="e.g. Downtown Central"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full bg-white border border-[#E5E7EB] rounded-[12px] p-2.5 text-xs text-[#14201A] outline-none focus:border-[#1F5C3A]"
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-400 block mb-1">Branch Code</label>
+              <label className="text-xs font-semibold text-[#6B7A72] block mb-1">Branch Code</label>
               <input
                 type="text"
                 required
                 value={newBranchCode}
                 onChange={(e) => setNewBranchCode(e.target.value.toUpperCase())}
                 placeholder="e.g. DT01"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                className="w-full bg-white border border-[#E5E7EB] rounded-[12px] p-2.5 text-xs text-[#14201A] outline-none focus:border-[#1F5C3A] font-mono"
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-400 block mb-1">Address</label>
+              <label className="text-xs font-semibold text-[#6B7A72] block mb-1">Address</label>
               <input
                 type="text"
                 value={newBranchAddress}
                 onChange={(e) => setNewBranchAddress(e.target.value)}
                 placeholder="123 Main Street"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full bg-white border border-[#E5E7EB] rounded-[12px] p-2.5 text-xs text-[#14201A] outline-none focus:border-[#1F5C3A]"
               />
             </div>
             <div className="flex justify-end space-x-3 pt-3">
               <button
                 type="button"
                 onClick={() => setShowBranchModal(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700"
+                className="px-4 py-2 rounded-[12px] text-xs font-semibold bg-[#FAFAF7] text-[#6B7A72] hover:text-[#14201A] border border-[#E5E7EB]"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={actionLoading}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30"
+                className="px-4 py-2 rounded-[12px] text-xs font-semibold bg-[#1F5C3A] hover:bg-[#18472D] text-white shadow-sm"
               >
                 Create Branch
               </button>
@@ -984,49 +1040,49 @@ export const AdminDashboard: React.FC = () => {
 
       {/* CREATE SERVICE MODAL */}
       {showServiceModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <form onSubmit={handleCreateService} className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <h3 className="text-base font-bold text-white">Add New Service</h3>
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <form onSubmit={handleCreateService} className="bg-white border border-[#E5E7EB] rounded-[16px] max-w-md w-full p-6 space-y-4 shadow-lg">
+            <h3 className="text-base font-semibold text-[#14201A]">Add New Service</h3>
             <div>
-              <label className="text-xs font-semibold text-slate-400 block mb-1">Service Name</label>
+              <label className="text-xs font-semibold text-[#6B7A72] block mb-1">Service Name</label>
               <input
                 type="text"
                 required
                 value={newServiceName}
                 onChange={(e) => setNewServiceName(e.target.value)}
-                placeholder="e.g. Pediatric Consultation"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="e.g. General Consultation"
+                className="w-full bg-white border border-[#E5E7EB] rounded-[12px] p-2.5 text-xs text-[#14201A] outline-none focus:border-[#1F5C3A]"
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-400 block mb-1">Service Code (Prefix)</label>
+              <label className="text-xs font-semibold text-[#6B7A72] block mb-1">Service Code (Prefix)</label>
               <input
                 type="text"
                 required
                 value={newServiceCode}
                 onChange={(e) => setNewServiceCode(e.target.value.toUpperCase())}
-                placeholder="e.g. PED"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                placeholder="e.g. GEN"
+                className="w-full bg-white border border-[#E5E7EB] rounded-[12px] p-2.5 text-xs text-[#14201A] outline-none focus:border-[#1F5C3A] font-mono"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-semibold text-slate-400 block mb-1">Est. Duration (min)</label>
+                <label className="text-xs font-semibold text-[#6B7A72] block mb-1">Est. Duration (min)</label>
                 <input
                   type="number"
                   min="1"
                   max="180"
                   value={newServiceDuration}
                   onChange={(e) => setNewServiceDuration(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full bg-white border border-[#E5E7EB] rounded-[12px] p-2.5 text-xs text-[#14201A] outline-none focus:border-[#1F5C3A]"
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold text-slate-400 block mb-1">Priority Tier</label>
+                <label className="text-xs font-semibold text-[#6B7A72] block mb-1">Priority Tier</label>
                 <select
                   value={newServicePriority}
                   onChange={(e) => setNewServicePriority(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full bg-white border border-[#E5E7EB] rounded-[12px] p-2.5 text-xs text-[#14201A] outline-none focus:border-[#1F5C3A]"
                 >
                   <option value={1}>Tier 1 (Normal)</option>
                   <option value={2}>Tier 2 (High / Urgent)</option>
@@ -1038,14 +1094,14 @@ export const AdminDashboard: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowServiceModal(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700"
+                className="px-4 py-2 rounded-[12px] text-xs font-semibold bg-[#FAFAF7] text-[#6B7A72] hover:text-[#14201A] border border-[#E5E7EB]"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={actionLoading}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30"
+                className="px-4 py-2 rounded-[12px] text-xs font-semibold bg-[#1F5C3A] hover:bg-[#18472D] text-white shadow-sm"
               >
                 Create Service
               </button>
@@ -1056,43 +1112,43 @@ export const AdminDashboard: React.FC = () => {
 
       {/* CREATE COUNTER MODAL */}
       {showCounterModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <form onSubmit={handleCreateCounter} className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <h3 className="text-base font-bold text-white">Register Service Counter</h3>
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <form onSubmit={handleCreateCounter} className="bg-white border border-[#E5E7EB] rounded-[16px] max-w-md w-full p-6 space-y-4 shadow-lg">
+            <h3 className="text-base font-semibold text-[#14201A]">Register Service Counter</h3>
             <div>
-              <label className="text-xs font-semibold text-slate-400 block mb-1">Counter Name</label>
+              <label className="text-xs font-semibold text-[#6B7A72] block mb-1">Counter Name</label>
               <input
                 type="text"
                 required
                 value={newCounterName}
                 onChange={(e) => setNewCounterName(e.target.value)}
                 placeholder="e.g. Express Station A"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full bg-white border border-[#E5E7EB] rounded-[12px] p-2.5 text-xs text-[#14201A] outline-none focus:border-[#1F5C3A]"
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-400 block mb-1">Counter Number</label>
+              <label className="text-xs font-semibold text-[#6B7A72] block mb-1">Counter Number</label>
               <input
                 type="text"
                 required
                 value={newCounterNumber}
                 onChange={(e) => setNewCounterNumber(e.target.value)}
-                placeholder="e.g. 03"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                placeholder="e.g. 01"
+                className="w-full bg-white border border-[#E5E7EB] rounded-[12px] p-2.5 text-xs text-[#14201A] outline-none focus:border-[#1F5C3A] font-mono"
               />
             </div>
             <div className="flex justify-end space-x-3 pt-3">
               <button
                 type="button"
                 onClick={() => setShowCounterModal(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700"
+                className="px-4 py-2 rounded-[12px] text-xs font-semibold bg-[#FAFAF7] text-[#6B7A72] hover:text-[#14201A] border border-[#E5E7EB]"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={actionLoading}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30"
+                className="px-4 py-2 rounded-[12px] text-xs font-semibold bg-[#1F5C3A] hover:bg-[#18472D] text-white shadow-sm"
               >
                 Create Counter
               </button>
@@ -1103,36 +1159,36 @@ export const AdminDashboard: React.FC = () => {
 
       {/* INVITE STAFF MODAL */}
       {showStaffModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <form onSubmit={handleInviteStaff} className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <h3 className="text-base font-bold text-white">Invite Staff Member</h3>
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <form onSubmit={handleInviteStaff} className="bg-white border border-[#E5E7EB] rounded-[16px] max-w-md w-full p-6 space-y-4 shadow-lg">
+            <h3 className="text-base font-semibold text-[#14201A]">Invite Staff Member</h3>
             <div>
-              <label className="text-xs font-semibold text-slate-400 block mb-1">Full Name</label>
+              <label className="text-xs font-semibold text-[#6B7A72] block mb-1">Full Name</label>
               <input
                 type="text"
                 value={newStaffName}
                 onChange={(e) => setNewStaffName(e.target.value)}
-                placeholder="Dr. Alice Smith"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="Jane Doe"
+                className="w-full bg-white border border-[#E5E7EB] rounded-[12px] p-2.5 text-xs text-[#14201A] outline-none focus:border-[#1F5C3A]"
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-400 block mb-1">Email Address</label>
+              <label className="text-xs font-semibold text-[#6B7A72] block mb-1">Email Address</label>
               <input
                 type="email"
                 required
                 value={newStaffEmail}
                 onChange={(e) => setNewStaffEmail(e.target.value)}
-                placeholder="alice@metrohealth.org"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="jane@metrohealth.org"
+                className="w-full bg-white border border-[#E5E7EB] rounded-[12px] p-2.5 text-xs text-[#14201A] outline-none focus:border-[#1F5C3A]"
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-400 block mb-1">Role Assignment</label>
+              <label className="text-xs font-semibold text-[#6B7A72] block mb-1">Role Assignment</label>
               <select
                 value={newStaffRole}
                 onChange={(e) => setNewStaffRole(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full bg-white border border-[#E5E7EB] rounded-[12px] p-2.5 text-xs text-[#14201A] outline-none focus:border-[#1F5C3A]"
               >
                 <option value="ORG_STAFF">Staff Operator</option>
                 <option value="ORG_ADMIN">Organization Administrator</option>
@@ -1142,14 +1198,14 @@ export const AdminDashboard: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowStaffModal(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700"
+                className="px-4 py-2 rounded-[12px] text-xs font-semibold bg-[#FAFAF7] text-[#6B7A72] hover:text-[#14201A] border border-[#E5E7EB]"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={actionLoading}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30"
+                className="px-4 py-2 rounded-[12px] text-xs font-semibold bg-[#1F5C3A] hover:bg-[#18472D] text-white shadow-sm"
               >
                 Send Invite
               </button>
@@ -1160,32 +1216,32 @@ export const AdminDashboard: React.FC = () => {
 
       {/* EDIT QUEUE CONFIG MODAL */}
       {showQueueConfigModal && activeQueueConfig && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <form onSubmit={handleSaveQueueConfig} className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <h3 className="text-base font-bold text-white">Queue Configuration</h3>
-            <p className="text-xs text-slate-400">Settings for {activeQueueConfig.service?.name}</p>
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <form onSubmit={handleSaveQueueConfig} className="bg-white border border-[#E5E7EB] rounded-[16px] max-w-md w-full p-6 space-y-4 shadow-lg">
+            <h3 className="text-base font-semibold text-[#14201A]">Queue Configuration</h3>
+            <p className="text-xs text-[#6B7A72]">Settings for {activeQueueConfig.service?.name}</p>
 
             <div>
-              <label className="text-xs font-semibold text-slate-400 block mb-1">Max Waiting Capacity</label>
+              <label className="text-xs font-semibold text-[#6B7A72] block mb-1">Max Waiting Capacity</label>
               <input
                 type="number"
                 min="10"
                 max="1000"
                 value={maxCapacity}
                 onChange={(e) => setMaxCapacity(Number(e.target.value))}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full bg-white border border-[#E5E7EB] rounded-[12px] p-2.5 text-xs text-[#14201A] outline-none focus:border-[#1F5C3A]"
               />
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-slate-400 block mb-1">Buffer Minutes Between Tickets</label>
+              <label className="text-xs font-semibold text-[#6B7A72] block mb-1">Buffer Minutes Between Tickets</label>
               <input
                 type="number"
                 min="0"
                 max="60"
                 value={bufferMins}
                 onChange={(e) => setBufferMins(Number(e.target.value))}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full bg-white border border-[#E5E7EB] rounded-[12px] p-2.5 text-xs text-[#14201A] outline-none focus:border-[#1F5C3A]"
               />
             </div>
 
@@ -1195,9 +1251,9 @@ export const AdminDashboard: React.FC = () => {
                 id="allowRemote"
                 checked={allowRemote}
                 onChange={(e) => setAllowRemote(e.target.checked)}
-                className="h-4 w-4 rounded bg-slate-950 border-slate-800 text-indigo-600 focus:ring-indigo-500"
+                className="h-4 w-4 rounded border-[#E5E7EB] text-[#1F5C3A] focus:ring-[#1F5C3A]"
               />
-              <label htmlFor="allowRemote" className="text-xs font-semibold text-slate-300">
+              <label htmlFor="allowRemote" className="text-xs font-semibold text-[#14201A]">
                 Allow Remote Joining from Customer Mobile App
               </label>
             </div>
@@ -1206,14 +1262,14 @@ export const AdminDashboard: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowQueueConfigModal(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700"
+                className="px-4 py-2 rounded-[12px] text-xs font-semibold bg-[#FAFAF7] text-[#6B7A72] hover:text-[#14201A] border border-[#E5E7EB]"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={actionLoading}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30"
+                className="px-4 py-2 rounded-[12px] text-xs font-semibold bg-[#1F5C3A] hover:bg-[#18472D] text-white shadow-sm"
               >
                 Save Settings
               </button>

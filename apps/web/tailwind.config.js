@@ -7,14 +7,39 @@ export default {
   theme: {
     extend: {
       colors: {
-        brand: {
-          50: '#eef2ff',
-          100: '#e0e7ff',
-          500: '#6366f1',
-          600: '#4f46e5',
-          700: '#4338ca',
-          900: '#312e81',
+        forest: {
+          DEFAULT: '#1F5C3A',
+          hover: '#18472D',
+          light: '#E8F3EC',
         },
+        mint: {
+          DEFAULT: '#E8F3EC',
+          border: '#D0E6D8',
+        },
+        'off-white': '#FAFAF7',
+        ink: {
+          DEFAULT: '#14201A',
+          muted: '#6B7A72',
+        },
+        'soft-grey': '#6B7A72',
+        lime: {
+          DEFAULT: '#B7E36B',
+          accent: '#A4D652',
+        },
+        brand: {
+          50: '#E8F3EC',
+          100: '#E8F3EC',
+          500: '#1F5C3A',
+          600: '#1F5C3A',
+          700: '#18472D',
+          900: '#14201A',
+        },
+      },
+      borderRadius: {
+        'input': '12px',
+        'button': '12px',
+        'sheet': '16px',
+        'badge': '8px',
       },
     },
   },
