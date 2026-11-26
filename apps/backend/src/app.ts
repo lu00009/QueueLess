@@ -8,6 +8,7 @@ import { healthRouter } from './routes/health.routes';
 import { authRouter } from './routes/auth.routes';
 import { orgManagementRouter } from './routes/org-management.routes';
 import { ticketRouter } from './routes/ticket.routes';
+import { queueEngineRouter } from './routes/queue-engine.routes';
 import { authenticateToken, requireRoles, requireOrgAccess, AuthenticatedRequest } from './middleware/auth.middleware';
 import { UserRole, OrgRole } from '@queueless/shared-types';
 
@@ -36,6 +37,7 @@ export function createApp(): Express {
   app.use('/api/v1/auth', authRouter);
   app.use('/api/v1', orgManagementRouter);
   app.use('/api/v1', ticketRouter);
+  app.use('/api/v1', queueEngineRouter);
 
   // Test Route for Role-Based Access Control Verification
   app.get(
