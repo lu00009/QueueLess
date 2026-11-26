@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../auth/providers/auth_provider.dart';
 
 class CustomerProfileScreen extends ConsumerWidget {
@@ -12,99 +13,140 @@ class CustomerProfileScreen extends ConsumerWidget {
     final user = auth.user;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: const Text('My Profile', style: TextStyle(fontWeight: FontWeight.bold)),
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            // Avatar card
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 36,
-                    backgroundColor: const Color(0xFFEEF2FF),
-                    child: Text(
-                      (user?.fullName.isNotEmpty ?? false) ? user!.fullName[0].toUpperCase() : 'C',
-                      style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5)),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    user?.fullName ?? 'Customer',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    user?.email ?? '',
-                    style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
+      backgroundColor: AppTheme.offWhite,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: AppTheme.margin, vertical: AppTheme.space24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Account', style: AppTheme.titleLarge),
+              const SizedBox(height: AppTheme.space4),
+              const Text('Manage your queue profile and past activity.', style: AppTheme.caption),
+              const SizedBox(height: AppTheme.space24),
 
-            // Menu Items
-            Material(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
+              // Large user section (16px radius, mint tint)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppTheme.space24),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  color: AppTheme.mintTint,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSheet),
                 ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    ListTile(
-                      leading: const Icon(Icons.history_rounded, color: Color(0xFF4F46E5)),
-                      title: const Text('Queue Ticket History', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                      trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8)),
-                      onTap: () => context.push('/history'),
+                    Text(
+                      user?.fullName ?? 'Customer',
+                      style: AppTheme.titleMedium,
                     ),
-                    const Divider(height: 1, indent: 56),
-                    ListTile(
-                      leading: const Icon(Icons.verified_user_outlined, color: Color(0xFF059669)),
-                      title: const Text('Role & Authorization', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                      subtitle: Text('Role: ${user?.role ?? "CUSTOMER"}', style: const TextStyle(fontSize: 12)),
+                    const SizedBox(height: AppTheme.space4),
+                    Text(
+                      user?.email ?? '',
+                      style: AppTheme.captionMedium,
+                    ),
+                    if (user?.phone != null && user!.phone!.isNotEmpty) ...[
+                      const SizedBox(height: AppTheme.space4),
+                      Text(user.phone!, style: AppTheme.caption),
+                    ],
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: AppTheme.space32),
+
+              // List rows with dividers
+              const Text('Activity & settings', style: AppTheme.captionMedium),
+              const SizedBox(height: AppTheme.space8),
+
+              InkWell(
+                onTap: () => context.push('/history'),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(vertical: AppTheme.space16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Visit history', style: AppTheme.bodyMedium),
+                            SizedBox(height: AppTheme.space4),
+                            Text('View past tickets and completed services', style: AppTheme.caption),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.arrow_forward, size: 16, color: AppTheme.softGrey),
+                    ],
+                  ),
+                ),
+              ),
+              const Divider(),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppTheme.space16),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Account role', style: AppTheme.bodyMedium),
+                          SizedBox(height: AppTheme.space4),
+                          Text('Permissions for remote queue booking', style: AppTheme.caption),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.mintTint,
+                        borderRadius: BorderRadius.circular(AppTheme.radiusBadge),
+                      ),
+                      child: Text(
+                        user?.role ?? 'CUSTOMER',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.forestGreen,
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 32),
+              const Divider(),
 
-            // Sign out
-            ElevatedButton.icon(
-              onPressed: () async {
-                await ref.read(authStateProvider.notifier).logout();
-                if (context.mounted) {
-                  context.go('/login');
-                }
-              },
-              icon: const Icon(Icons.logout_rounded),
-              label: const Text('Sign Out'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFEF2F2),
-                foregroundColor: const Color(0xFFDC2626),
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  side: const BorderSide(color: Color(0xFFFCA5A5)),
+              const SizedBox(height: AppTheme.space32),
+
+              // Single main sign out action
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () async {
+                    await ref.read(authStateProvider.notifier).logout();
+                    if (context.mounted) {
+                      context.go('/login');
+                    }
+                  },
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppTheme.borderLight),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+                    ),
+                  ),
+                  child: const Text(
+                    'Sign out',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.ink,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

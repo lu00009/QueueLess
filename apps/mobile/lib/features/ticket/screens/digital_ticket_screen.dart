@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/theme/app_theme.dart';
 import '../models/ticket_model.dart';
 import '../providers/ticket_provider.dart';
 
@@ -21,14 +22,23 @@ class _DigitalTicketScreenState extends ConsumerState<DigitalTicketScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Cancel Ticket?'),
-        content: const Text('Are you sure you want to cancel this ticket? You will lose your spot in line.'),
+        backgroundColor: AppTheme.offWhite,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusSheet),
+        ),
+        title: const Text('Cancel ticket?', style: AppTheme.titleMedium),
+        content: const Text(
+          'You will forfeit your current position in line.',
+          style: AppTheme.caption,
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Keep Ticket')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Keep spot', style: TextStyle(color: AppTheme.forestGreen, fontWeight: FontWeight.w600)),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Yes, Cancel'),
+            child: const Text('Leave line', style: TextStyle(color: AppTheme.softGrey, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -41,7 +51,10 @@ class _DigitalTicketScreenState extends ConsumerState<DigitalTicketScreen> {
         ref.refresh(activeTicketsProvider);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Ticket cancelled successfully')),
+            const SnackBar(
+              backgroundColor: AppTheme.ink,
+              content: Text('Ticket cancelled. Spot released.', style: TextStyle(color: AppTheme.offWhite)),
+            ),
           );
           context.pop();
         }
@@ -49,7 +62,10 @@ class _DigitalTicketScreenState extends ConsumerState<DigitalTicketScreen> {
         if (mounted) {
           setState(() => _cancelling = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to cancel ticket: $e')),
+            SnackBar(
+              backgroundColor: AppTheme.ink,
+              content: Text('Could not cancel ticket. Please check connection.', style: const TextStyle(color: AppTheme.offWhite)),
+            ),
           );
         }
       }
@@ -61,24 +77,61 @@ class _DigitalTicketScreenState extends ConsumerState<DigitalTicketScreen> {
     final ticketAsync = ref.watch(ticketDetailProvider(widget.ticketId));
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: AppTheme.offWhite,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text('Digital Ticket Pass', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: AppTheme.ink),
           onPressed: () => context.pop(),
         ),
       ),
-      body: ticketAsync.when(
-        data: (ticket) => _buildTicketBody(ticket),
-        loading: () => widget.initialTicket != null
-            ? _buildTicketBody(widget.initialTicket!)
-            : const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(
-          child: Text('Error: $err', style: const TextStyle(color: Colors.red)),
+      body: SafeArea(
+        child: ticketAsync.when(
+          data: (ticket) => _buildTicketBody(ticket),
+          loading: () => widget.initialTicket != null
+              ? _buildTicketBody(widget.initialTicket!)
+              : _buildSkeletonLoading(),
+          error: (err, _) => _buildErrorState(err.toString()),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSkeletonLoading() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.margin, vertical: AppTheme.space16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(height: 32, width: 180, decoration: BoxDecoration(color: AppTheme.mintTint, borderRadius: BorderRadius.circular(4))),
+          const SizedBox(height: AppTheme.space24),
+          Container(
+            height: 320,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: AppTheme.mintTint.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSheet),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(String message) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.margin, vertical: AppTheme.space32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Unable to load ticket', style: AppTheme.titleLarge),
+          const SizedBox(height: AppTheme.space8),
+          const Text('Check your network connection and retry to view ticket status.', style: AppTheme.body),
+          const SizedBox(height: AppTheme.space24),
+          ElevatedButton(
+            onPressed: () => ref.refresh(ticketDetailProvider(widget.ticketId)),
+            child: const Text('Try again'),
+          ),
+        ],
       ),
     );
   }
@@ -89,236 +142,155 @@ class _DigitalTicketScreenState extends ConsumerState<DigitalTicketScreen> {
     final isServing = ticket.status == 'SERVING';
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.margin, vertical: AppTheme.space16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Boarding Pass Ticket Card
+          const Text('Digital ticket', style: AppTheme.titleLarge),
+          const SizedBox(height: AppTheme.space4),
+          Text('${ticket.organizationName} • ${ticket.branchName}', style: AppTheme.caption),
+          const SizedBox(height: AppTheme.space24),
+
+          // Main ticket section (16px corner radius)
           Container(
+            width: double.infinity,
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
+              color: AppTheme.mintTint,
+              borderRadius: BorderRadius.circular(AppTheme.radiusSheet),
             ),
+            padding: const EdgeInsets.all(AppTheme.space24),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top Header Portion
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: isCalled
-                        ? const Color(0xFF0284C7)
-                        : isServing
-                        ? const Color(0xFF059669)
-                        : const Color(0xFF4F46E5),
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            ticket.organizationName.toUpperCase(),
-                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white70),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            ticket.branchName,
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
-                          ),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          ticket.status,
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Main Ticket Body
-                Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    children: [
-                      const Text(
-                        'YOUR TICKET NUMBER',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8), letterSpacing: 1),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        ticket.ticketNumber,
-                        style: const TextStyle(fontSize: 48, fontWeight: FontWeight.w900, color: Color(0xFF0F172A), letterSpacing: 2),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Service info
-                      Text(
-                        ticket.serviceName,
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Live Position & Wait Time Highlights
-                      if (isWaiting) ...[
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Container(
-                                padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFEEF2FF),
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: Column(
-                                  children: [
-                                    const Text('POSITION IN LINE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF6366F1))),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '#${ticket.currentPosition}',
-                                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5)),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Container(
-                                padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF1F5F9),
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: Column(
-                                  children: [
-                                    const Text('EST. WAIT TIME', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '~${ticket.estimatedWaitMinutes}m',
-                                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ] else if (isCalled) ...[
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF0F9FF),
-                            border: Border.all(color: const Color(0xFFBAE6FD)),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Column(
-                            children: [
-                              const Icon(Icons.volume_up_rounded, color: Color(0xFF0284C7), size: 28),
-                              const SizedBox(height: 6),
-                              const Text('NOW CALLING', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0284C7))),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Please proceed to ${ticket.counterName ?? 'Assigned Counter'}',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0369A1)),
-                              ),
-                            ],
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Your number', style: AppTheme.captionMedium),
+                        const SizedBox(height: AppTheme.space4),
+                        Text(
+                          ticket.ticketNumber,
+                          style: const TextStyle(
+                            fontSize: 36,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.ink,
+                            letterSpacing: -1,
                           ),
                         ),
                       ],
-                    ],
-                  ),
-                ),
-
-                // Perforated Tear Line
-                Row(
-                  children: [
-                    Container(
-                      height: 24,
-                      width: 12,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF0F172A),
-                        borderRadius: BorderRadius.horizontal(right: Radius.circular(12)),
-                      ),
                     ),
-                    Expanded(
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          return Flex(
-                            direction: Axis.horizontal,
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: List.generate(
-                              (constraints.constrainWidth() / 10).floor(),
-                              (_) => const SizedBox(
-                                width: 5,
-                                height: 1.5,
-                                child: DecoratedBox(decoration: BoxDecoration(color: Color(0xFFCBD5E1))),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+                    // Single small lime accent pill for active state
                     Container(
-                      height: 24,
-                      width: 12,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF0F172A),
-                        borderRadius: BorderRadius.horizontal(left: Radius.circular(12)),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isCalled ? AppTheme.limeAccent : AppTheme.forestGreen,
+                        borderRadius: BorderRadius.circular(AppTheme.radiusBadge),
+                      ),
+                      child: Text(
+                        isCalled
+                            ? 'Now called'
+                            : isServing
+                                ? 'Serving now'
+                                : 'In queue',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: isCalled ? AppTheme.ink : AppTheme.offWhite,
+                        ),
                       ),
                     ),
                   ],
                 ),
+                const SizedBox(height: AppTheme.space16),
+                const Divider(),
+                const SizedBox(height: AppTheme.space16),
 
-                // Bottom QR Code & Verification Portion
-                Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
+                // Details grid
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Service', style: AppTheme.caption),
+                          const SizedBox(height: AppTheme.space4),
+                          Text(ticket.serviceName, style: AppTheme.bodyMedium),
+                        ],
+                      ),
+                    ),
+                    if (isWaiting) ...[
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text('Position in line', style: AppTheme.caption),
+                          const SizedBox(height: AppTheme.space4),
+                          Text('#${ticket.currentPosition}', style: AppTheme.bodyMedium),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: AppTheme.space16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Estimated wait', style: AppTheme.caption),
+                          const SizedBox(height: AppTheme.space4),
+                          Text('~${ticket.estimatedWaitMinutes}m', style: AppTheme.bodyMedium),
+                        ],
+                      ),
+                    ),
+                    if (ticket.counterName != null) ...[
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text('Counter', style: AppTheme.caption),
+                          const SizedBox(height: AppTheme.space4),
+                          Text(ticket.counterName!, style: AppTheme.bodyMedium),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+
+                const SizedBox(height: AppTheme.space24),
+
+                // Pass verification box
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(AppTheme.space16),
+                  decoration: BoxDecoration(
+                    color: AppTheme.offWhite,
+                    borderRadius: BorderRadius.circular(AppTheme.radiusInput),
+                    border: Border.all(color: AppTheme.borderLight),
+                  ),
+                  child: Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                        ),
+                      const Icon(Icons.qr_code_2, size: 40, color: AppTheme.ink),
+                      const SizedBox(width: AppTheme.space16),
+                      Expanded(
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.qr_code_2_rounded, size: 90, color: Color(0xFF1E293B)),
-                            const SizedBox(height: 8),
+                            const Text('Verification code', style: AppTheme.caption),
+                            const SizedBox(height: 2),
                             Text(
                               'PASS CODE: ${ticket.verificationCode}',
                               style: const TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 3,
-                                color: Color(0xFF334155),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 2,
+                                color: AppTheme.ink,
                               ),
                             ),
                           ],
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        'Present this pass at the counter scanner upon arrival',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
                       ),
                     ],
                   ),
@@ -326,19 +298,30 @@ class _DigitalTicketScreenState extends ConsumerState<DigitalTicketScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 24),
 
-          // Cancel button
+          const SizedBox(height: AppTheme.space32),
+
+          // Cancel or exit button
           if (isWaiting || isCalled)
-            OutlinedButton.icon(
-              onPressed: _cancelling ? null : _handleCancel,
-              icon: const Icon(Icons.cancel_outlined, size: 16),
-              label: Text(_cancelling ? 'Cancelling...' : 'Cancel This Ticket'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFF87171),
-                side: const BorderSide(color: Color(0xFF7F1D1D)),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: _cancelling ? null : _handleCancel,
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppTheme.borderLight),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+                  ),
+                ),
+                child: Text(
+                  _cancelling ? 'Cancelling...' : 'Cancel This Ticket',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.softGrey,
+                  ),
+                ),
               ),
             ),
         ],

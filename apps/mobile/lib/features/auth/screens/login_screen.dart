@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 
 class CustomerLoginScreen extends ConsumerStatefulWidget {
@@ -25,11 +26,11 @@ class _CustomerLoginScreenState extends ConsumerState<CustomerLoginScreen> {
   void _submit() async {
     if (_formKey.currentState!.validate()) {
       final success = await ref.read(authStateProvider.notifier).login(
-            _emailController.text,
+            _emailController.text.trim(),
             _passwordController.text,
           );
       if (success && mounted) {
-        context.go('/home');
+        context.go('/');
       }
     }
   }
@@ -44,170 +45,126 @@ class _CustomerLoginScreenState extends ConsumerState<CustomerLoginScreen> {
     final authState = ref.watch(authStateProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: AppTheme.offWhite,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+            padding: const EdgeInsets.symmetric(horizontal: AppTheme.margin, vertical: AppTheme.space32),
             child: Form(
               key: _formKey,
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // App Icon
-                  Center(
-                    child: Container(
-                      height: 64,
-                      width: 64,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF4F46E5),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF4F46E5).withOpacity(0.4),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.confirmation_number_rounded,
-                        color: Colors.white,
-                        size: 32,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
+                  const Text('QueueLess', style: AppTheme.titleLarge),
+                  const SizedBox(height: AppTheme.space8),
                   const Text(
-                    'QueueLess',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                    'Access your remote queue tickets and saved visits.',
+                    style: AppTheme.caption,
                   ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Skip the waiting room. Join queues remotely.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF94A3B8),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: AppTheme.space32),
 
-                  if (authState.error != null)
+                  if (authState.error != null) ...[
                     Container(
-                      margin: const EdgeInsets.only(bottom: 20),
-                      padding: const EdgeInsets.all(12),
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(AppTheme.space16),
+                      margin: const EdgeInsets.only(bottom: AppTheme.space24),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF450A0A),
-                        border: Border.all(color: const Color(0xFF991B1B)),
-                        borderRadius: BorderRadius.circular(12),
+                        color: AppTheme.mintTint,
+                        borderRadius: BorderRadius.circular(AppTheme.radiusInput),
+                        border: Border.all(color: AppTheme.forestGreen.withOpacity(0.3)),
                       ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.error_outline, color: Color(0xFFF87171), size: 20),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              authState.error!,
-                              style: const TextStyle(color: Color(0xFFFCA5A5), fontSize: 12),
-                            ),
-                          ),
-                        ],
+                      child: Text(
+                        authState.error!,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w400,
+                          color: AppTheme.ink,
+                        ),
                       ),
                     ),
+                  ],
 
                   // Email
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      labelText: 'Email Address',
-                      labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
-                      prefixIcon: const Icon(Icons.mail_outline_rounded, color: Color(0xFF64748B)),
-                      filled: true,
-                      fillColor: const Color(0xFF1E293B),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
-                      ),
+                    style: AppTheme.body,
+                    decoration: const InputDecoration(
+                      labelText: 'Email address',
+                      hintText: 'name@example.com',
                     ),
-                    validator: (val) => val == null || !val.contains('@') ? 'Enter a valid email' : null,
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) return 'Enter your email';
+                      if (!val.contains('@')) return 'Enter a valid email';
+                      return null;
+                    },
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppTheme.space16),
 
                   // Password
                   TextFormField(
                     controller: _passwordController,
                     obscureText: true,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
+                    style: AppTheme.body,
+                    decoration: const InputDecoration(
                       labelText: 'Password',
-                      labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
-                      prefixIcon: const Icon(Icons.lock_outline_rounded, color: Color(0xFF64748B)),
-                      filled: true,
-                      fillColor: const Color(0xFF1E293B),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
-                      ),
+                      hintText: '••••••••',
                     ),
-                    validator: (val) => val == null || val.length < 6 ? 'Password must be 6+ chars' : null,
+                    validator: (val) {
+                      if (val == null || val.isEmpty) return 'Enter your password';
+                      return null;
+                    },
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppTheme.space8),
 
-                  ElevatedButton(
-                    onPressed: authState.isLoading ? null : _submit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4F46E5),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _quickFill,
+                      child: const Text(
+                        'Fill Demo Customer',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w400,
+                          color: AppTheme.softGrey,
+                        ),
                       ),
                     ),
-                    child: authState.isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                          )
-                        : const Text(
-                            'Sign In',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+
+                  const SizedBox(height: AppTheme.space24),
+
+                  // One main action per screen
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: authState.isLoading ? null : _submit,
+                      child: Text(
+                        authState.isLoading ? 'Signing In...' : 'Sign In',
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: AppTheme.space24),
+
+                  Center(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text("Don't have an account? ", style: AppTheme.caption),
+                        GestureDetector(
+                          onTap: () => context.go('/register'),
+                          child: const Text(
+                            'Create one',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.forestGreen,
+                            ),
                           ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Quick fill button for demo testing
-                  OutlinedButton.icon(
-                    onPressed: _quickFill,
-                    icon: const Icon(Icons.auto_awesome_rounded, size: 16),
-                    label: const Text('Fill Demo Customer'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF818CF8),
-                      side: const BorderSide(color: Color(0xFF3730A3)),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text("Don't have an account?", style: TextStyle(color: Color(0xFF94A3B8))),
-                      TextButton(
-                        onPressed: () => context.go('/register'),
-                        child: const Text('Create Account', style: TextStyle(color: Color(0xFF818CF8), fontWeight: FontWeight.bold)),
-                      ),
-                    ],
                   ),
                 ],
               ),

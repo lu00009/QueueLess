@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 
 class CustomerRegisterScreen extends ConsumerStatefulWidget {
@@ -29,13 +30,13 @@ class _CustomerRegisterScreenState extends ConsumerState<CustomerRegisterScreen>
   void _submit() async {
     if (_formKey.currentState!.validate()) {
       final success = await ref.read(authStateProvider.notifier).register(
-            fullName: _nameController.text,
-            email: _emailController.text,
+            fullName: _nameController.text.trim(),
+            email: _emailController.text.trim(),
             password: _passwordController.text,
-            phone: _phoneController.text.isNotEmpty ? _phoneController.text : null,
+            phone: _phoneController.text.isNotEmpty ? _phoneController.text.trim() : null,
           );
       if (success && mounted) {
-        context.go('/home');
+        context.go('/');
       }
     }
   }
@@ -45,131 +46,141 @@ class _CustomerRegisterScreenState extends ConsumerState<CustomerRegisterScreen>
     final authState = ref.watch(authStateProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: AppTheme.offWhite,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: AppTheme.ink),
           onPressed: () => context.go('/login'),
         ),
       ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+            padding: const EdgeInsets.symmetric(horizontal: AppTheme.margin, vertical: AppTheme.space16),
             child: Form(
               key: _formKey,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const Text('Create account', style: AppTheme.titleLarge),
+                  const SizedBox(height: AppTheme.space8),
                   const Text(
-                    'Create Account',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                    'Join QueueLess to hold your place in line remotely.',
+                    style: AppTheme.caption,
                   ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Join QueueLess to book remote queue tickets.',
-                    style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
-                  ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: AppTheme.space24),
 
-                  if (authState.error != null)
+                  if (authState.error != null) ...[
                     Container(
-                      margin: const EdgeInsets.only(bottom: 20),
-                      padding: const EdgeInsets.all(12),
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(AppTheme.space16),
+                      margin: const EdgeInsets.only(bottom: AppTheme.space24),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF450A0A),
-                        border: Border.all(color: const Color(0xFF991B1B)),
-                        borderRadius: BorderRadius.circular(12),
+                        color: AppTheme.mintTint,
+                        borderRadius: BorderRadius.circular(AppTheme.radiusInput),
+                        border: Border.all(color: AppTheme.forestGreen.withOpacity(0.3)),
                       ),
                       child: Text(
                         authState.error!,
-                        style: const TextStyle(color: Color(0xFFFCA5A5), fontSize: 12),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w400,
+                          color: AppTheme.ink,
+                        ),
                       ),
                     ),
+                  ],
 
-                  // Name
+                  // Full name
                   TextFormField(
                     controller: _nameController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      labelText: 'Full Name',
-                      labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
-                      prefixIcon: const Icon(Icons.person_outline_rounded, color: Color(0xFF64748B)),
-                      filled: true,
-                      fillColor: const Color(0xFF1E293B),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                    style: AppTheme.body,
+                    decoration: const InputDecoration(
+                      labelText: 'Full name',
+                      hintText: 'Jane Smith',
                     ),
-                    validator: (val) => val == null || val.length < 2 ? 'Enter your full name' : null,
+                    validator: (val) => (val == null || val.trim().isEmpty) ? 'Enter your full name' : null,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppTheme.space16),
 
                   // Email
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      labelText: 'Email Address',
-                      labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
-                      prefixIcon: const Icon(Icons.mail_outline_rounded, color: Color(0xFF64748B)),
-                      filled: true,
-                      fillColor: const Color(0xFF1E293B),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                    style: AppTheme.body,
+                    decoration: const InputDecoration(
+                      labelText: 'Email address',
+                      hintText: 'name@example.com',
                     ),
-                    validator: (val) => val == null || !val.contains('@') ? 'Enter a valid email' : null,
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) return 'Enter your email';
+                      if (!val.contains('@')) return 'Enter a valid email';
+                      return null;
+                    },
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppTheme.space16),
 
                   // Phone
                   TextFormField(
                     controller: _phoneController,
                     keyboardType: TextInputType.phone,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      labelText: 'Phone (Optional)',
-                      labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
-                      prefixIcon: const Icon(Icons.phone_outlined, color: Color(0xFF64748B)),
-                      filled: true,
-                      fillColor: const Color(0xFF1E293B),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                    style: AppTheme.body,
+                    decoration: const InputDecoration(
+                      labelText: 'Mobile number (optional)',
+                      hintText: '+1 555-0199',
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppTheme.space16),
 
                   // Password
                   TextFormField(
                     controller: _passwordController,
                     obscureText: true,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
+                    style: AppTheme.body,
+                    decoration: const InputDecoration(
                       labelText: 'Password',
-                      labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
-                      prefixIcon: const Icon(Icons.lock_outline_rounded, color: Color(0xFF64748B)),
-                      filled: true,
-                      fillColor: const Color(0xFF1E293B),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                      hintText: 'At least 8 characters',
                     ),
-                    validator: (val) => val == null || val.length < 6 ? 'Password must be 6+ chars' : null,
+                    validator: (val) {
+                      if (val == null || val.length < 8) {
+                        return 'Password must be at least 8 characters';
+                      }
+                      return null;
+                    },
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppTheme.space32),
 
-                  ElevatedButton(
-                    onPressed: authState.isLoading ? null : _submit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4F46E5),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  // One main action
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: authState.isLoading ? null : _submit,
+                      child: Text(
+                        authState.isLoading ? 'Creating account...' : 'Create account',
+                      ),
                     ),
-                    child: authState.isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text('Create Account', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  ),
+
+                  const SizedBox(height: AppTheme.space24),
+
+                  Center(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text('Already have an account? ', style: AppTheme.caption),
+                        GestureDetector(
+                          onTap: () => context.go('/login'),
+                          child: const Text(
+                            'Sign in',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.forestGreen,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),

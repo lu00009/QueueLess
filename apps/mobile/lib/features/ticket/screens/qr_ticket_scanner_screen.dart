@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/theme/app_theme.dart';
 
 class QrTicketScannerScreen extends StatefulWidget {
   const QrTicketScannerScreen({super.key});
@@ -29,20 +30,19 @@ class _QrTicketScannerScreenState extends State<QrTicketScannerScreen> {
 
     try {
       String ticketId = rawPayload.trim();
-      // If QR encodes JSON: {"ticketId": "...", "verificationCode": "..."}
       if (rawPayload.startsWith('{')) {
         final parsed = jsonDecode(rawPayload);
         ticketId = parsed['ticketId'] ?? '';
       }
 
-      final response = await ApiClient.dio.get('/tickets/$ticketId');
+      await ApiClient.dio.get('/tickets/$ticketId');
       if (mounted) {
         context.push('/ticket/$ticketId');
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = 'Ticket could not be verified. Invalid QR or Ticket ID.';
+          _error = 'Ticket could not be verified. Check the ID and try again.';
         });
       }
     } finally {
@@ -57,132 +57,91 @@ class _QrTicketScannerScreenState extends State<QrTicketScannerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: AppTheme.offWhite,
       appBar: AppBar(
-        title: const Text('Scan Queue Ticket'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppTheme.ink),
+          onPressed: () => context.pop(),
+        ),
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.symmetric(horizontal: AppTheme.margin, vertical: AppTheme.space16),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Scanner Viewport Mock / Camera Integration target
+              const Text('Scan ticket', style: AppTheme.titleLarge),
+              const SizedBox(height: AppTheme.space4),
+              const Text(
+                'Point camera at a ticket QR code or enter ticket ID below.',
+                style: AppTheme.caption,
+              ),
+              const SizedBox(height: AppTheme.space24),
+
+              // Scanner Viewport Mock (16px corner radius, mint tint)
               Expanded(
                 child: Container(
+                  width: double.infinity,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF020617),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: const Color(0xFF334155)),
+                    color: AppTheme.mintTint,
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSheet),
                   ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Target Viewport Frame
-                      Container(
-                        width: 220,
-                        height: 220,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: const Color(0xFF38BDF8), width: 3),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
+                  child: Center(
+                    child: Container(
+                      width: 200,
+                      height: 200,
+                      decoration: BoxDecoration(
+                        color: AppTheme.offWhite,
+                        borderRadius: BorderRadius.circular(AppTheme.radiusSheet),
+                        border: Border.all(color: AppTheme.forestGreen, width: 2),
                       ),
-                      Column(
+                      child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.qr_code_scanner, size: 64, color: Color(0xFF38BDF8)),
-                          const SizedBox(height: 16),
+                          const Icon(Icons.qr_code_scanner, size: 56, color: AppTheme.forestGreen),
+                          const SizedBox(height: AppTheme.space16),
                           Text(
-                            _isProcessing ? 'Verifying Ticket...' : 'Align QR Code Within Frame',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Hold your device steady',
-                            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                            _isProcessing ? 'Verifying...' : 'Align code inside box',
+                            style: AppTheme.captionMedium,
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
 
+              const SizedBox(height: AppTheme.space24),
+
               if (_error != null) ...[
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFBE123C).withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFBE123C).withOpacity(0.3)),
-                  ),
-                  child: Text(
-                    _error!,
-                    style: const TextStyle(color: Color(0xFFFDA4AF), fontSize: 12),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+                Text(_error!, style: const TextStyle(fontSize: 13, color: AppTheme.softGrey)),
+                const SizedBox(height: AppTheme.space16),
               ],
 
-              const SizedBox(height: 24),
-
-              // Manual Code Entry Fallback
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFF334155)),
+              // Manual code input
+              TextFormField(
+                controller: _manualCodeController,
+                style: AppTheme.body,
+                decoration: const InputDecoration(
+                  labelText: 'Ticket ID or verification code',
+                  hintText: 'e.g. 78241',
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text(
-                      'Having Trouble Scanning?',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _manualCodeController,
-                      style: const TextStyle(color: Colors.white, fontSize: 13),
-                      decoration: InputDecoration(
-                        hintText: 'Enter Ticket ID or Verification Code',
-                        hintStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
-                        filled: true,
-                        fillColor: const Color(0xFF0F172A),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ElevatedButton(
-                      onPressed: _isProcessing
-                          ? null
-                          : () {
-                              final text = _manualCodeController.text.trim();
-                              if (text.isNotEmpty) {
-                                _verifyTicketPayload(text);
-                              }
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0284C7),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      child: const Text('Verify Ticket Manually', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                    ),
-                  ],
+              ),
+
+              const SizedBox(height: AppTheme.space16),
+
+              // One main action
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isProcessing
+                      ? null
+                      : () {
+                          if (_manualCodeController.text.trim().isNotEmpty) {
+                            _verifyTicketPayload(_manualCodeController.text);
+                          }
+                        },
+                  child: Text(_isProcessing ? 'Verifying...' : 'Verify ticket'),
                 ),
               ),
             ],

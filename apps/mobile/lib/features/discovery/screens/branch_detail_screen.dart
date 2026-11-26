@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/theme/app_theme.dart';
 import '../models/branch_model.dart';
 
 class BranchDetailScreen extends StatelessWidget {
@@ -10,140 +11,128 @@ class BranchDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppTheme.offWhite,
       appBar: AppBar(
-        title: Text(branch.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        title: const Text('Facility details'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Branch Summary Card
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: AppTheme.margin, vertical: AppTheme.space16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Large Left-Aligned Facility Name
+              Text(branch.name, style: AppTheme.titleLarge),
+              const SizedBox(height: AppTheme.space8),
+              Text(branch.address ?? 'Address not specified', style: AppTheme.caption),
+              if (branch.phone != null) ...[
+                const SizedBox(height: AppTheme.space4),
+                Text('Phone: ${branch.phone}', style: AppTheme.caption),
+              ],
+
+              const SizedBox(height: AppTheme.space32),
+
+              // Highlight Section: Hours of Operation
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppTheme.space16),
+                decoration: BoxDecoration(
+                  color: AppTheme.mintTint,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSheet),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Operating hours', style: AppTheme.bodyMedium),
+                    const SizedBox(height: AppTheme.space8),
+                    if (branch.operatingHours.isNotEmpty)
+                      ...branch.operatingHours.take(3).map((h) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(_formatDay(h.dayOfWeek), style: AppTheme.caption),
+                                Text(
+                                  h.isClosed ? 'Closed' : '${h.openTime} – ${h.closeTime}',
+                                  style: AppTheme.captionMedium,
+                                ),
+                              ],
+                            ),
+                          ))
+                    else
+                      const Text('Monday to Friday • 08:00 – 17:00', style: AppTheme.caption),
+                  ],
+                ),
               ),
+
+              const SizedBox(height: AppTheme.space32),
+
+              const Text('Available services', style: AppTheme.titleMedium),
+              const SizedBox(height: AppTheme.space8),
+              const Text('Select a department below to view wait times and enter the queue.', style: AppTheme.caption),
+              const SizedBox(height: AppTheme.space16),
+
+              if (branch.services.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: AppTheme.space24),
+                  child: Text('No active services currently listed for this branch.', style: AppTheme.caption),
+                )
+              else
+                ...branch.services.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final service = entry.value;
+                  return Column(
+                    children: [
+                      _buildServiceRow(context, service),
+                      if (index < branch.services.length - 1)
+                        const Divider(height: 1, color: AppTheme.borderLight),
+                    ],
+                  );
+                }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildServiceRow(BuildContext context, BranchServiceModel service) {
+    return InkWell(
+      onTap: () {
+        context.push('/join/${service.id}', extra: {
+          'service': service,
+          'branch': branch,
+        });
+      },
+      splashColor: AppTheme.mintTint.withOpacity(0.5),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppTheme.space16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        branch.organizationName,
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF6366F1)),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEEF2FF),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          branch.code,
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5)),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
+                  Text(service.name, style: AppTheme.bodyMedium),
+                  const SizedBox(height: AppTheme.space4),
                   Text(
-                    branch.name,
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                    'Average visit: ${service.estimatedDurationMinutes} minutes',
+                    style: AppTheme.caption,
                   ),
-                  if (branch.address != null) ...[
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const Icon(Icons.location_on_outlined, size: 16, color: Color(0xFF64748B)),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(branch.address!, style: const TextStyle(fontSize: 13, color: Color(0xFF64748B))),
-                        ),
-                      ],
-                    ),
-                  ],
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-
-            // Services Section Header
-            const Text(
-              'Select a Service to Join Queue',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
-            ),
-            const SizedBox(height: 12),
-
-            ...branch.services.map((service) {
-              return Card(
-                elevation: 0,
-                margin: const EdgeInsets.only(bottom: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: const BorderSide(color: Color(0xFFE2E8F0)),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Container(
-                        height: 40,
-                        width: 40,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEEF2FF),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.medical_services_outlined, color: Color(0xFF4F46E5), size: 20),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              service.name,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A)),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Est. ${service.estimatedDurationMinutes} mins per customer',
-                              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                            ),
-                          ],
-                        ),
-                      ),
-                      ElevatedButton(
-                        onPressed: () {
-                          context.push(
-                            '/join/${service.id}',
-                            extra: {
-                              'service': service,
-                              'branch': branch,
-                            },
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF4F46E5),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                        ),
-                        child: const Text('Join Queue'),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }),
+            const Icon(Icons.arrow_forward_ios, size: 14, color: AppTheme.softGrey),
           ],
         ),
       ),
     );
+  }
+
+  String _formatDay(int day) {
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    if (day >= 0 && day < days.length) return days[day];
+    return 'Day $day';
   }
 }

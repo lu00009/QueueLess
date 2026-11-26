@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/theme/app_theme.dart';
 import '../providers/ticket_provider.dart';
 
 class TicketHistoryScreen extends ConsumerWidget {
@@ -10,71 +11,171 @@ class TicketHistoryScreen extends ConsumerWidget {
     final historyAsync = ref.watch(ticketHistoryProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppTheme.offWhite,
       appBar: AppBar(
-        title: const Text('Past Visits & History', style: TextStyle(fontWeight: FontWeight.bold)),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppTheme.ink),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
-      body: RefreshIndicator(
-        onRefresh: () async => ref.refresh(ticketHistoryProvider),
-        child: historyAsync.when(
-          data: (tickets) {
-            if (tickets.isEmpty) {
-              return ListView(
-                children: const [
-                  SizedBox(height: 100),
-                  Center(
-                    child: Text('No previous tickets found.', style: TextStyle(color: Color(0xFF64748B))),
+      body: SafeArea(
+        child: RefreshIndicator(
+          color: AppTheme.forestGreen,
+          onRefresh: () async => ref.refresh(ticketHistoryProvider),
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(AppTheme.margin, AppTheme.space8, AppTheme.margin, AppTheme.space16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Visit history', style: AppTheme.titleLarge),
+                      SizedBox(height: AppTheme.space4),
+                      Text('Past services completed or tickets cancelled.', style: AppTheme.caption),
+                    ],
                   ),
-                ],
-              );
-            }
+                ),
+              ),
+              historyAsync.when(
+                data: (tickets) {
+                  if (tickets.isEmpty) {
+                    return const SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: AppTheme.margin),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('No past visits yet', style: AppTheme.titleMedium),
+                            SizedBox(height: AppTheme.space8),
+                            Text('Completed visits and cancelled tickets will appear here for your records.', style: AppTheme.body),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
 
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: tickets.length,
-              itemBuilder: (context, idx) {
-                final t = tickets[idx];
-                final isCompleted = t.status == 'COMPLETED';
-                return Card(
-                  elevation: 0,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: const BorderSide(color: Color(0xFFE2E8F0)),
-                  ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    leading: Container(
-                      height: 40,
-                      width: 40,
-                      decoration: BoxDecoration(
-                        color: isCompleted ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2),
-                        borderRadius: BorderRadius.circular(10),
+                  return SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: AppTheme.margin),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, idx) {
+                          if (idx >= tickets.length) return null;
+                          final t = tickets[idx];
+                          final isLast = idx == tickets.length - 1;
+                          final isCompleted = t.status == 'COMPLETED';
+
+                          return Column(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: AppTheme.space16),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: isCompleted ? AppTheme.mintTint : AppTheme.borderLight,
+                                        borderRadius: BorderRadius.circular(AppTheme.radiusBadge),
+                                      ),
+                                      child: Text(
+                                        t.ticketNumber,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: isCompleted ? AppTheme.forestGreen : AppTheme.softGrey,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppTheme.space16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(t.serviceName, style: AppTheme.bodyMedium),
+                                          const SizedBox(height: AppTheme.space4),
+                                          Text(
+                                            '${t.branchName} • ${t.createdAt.split('T')[0]}',
+                                            style: AppTheme.caption,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Text(
+                                      isCompleted ? 'Completed' : 'Cancelled',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: isCompleted ? AppTheme.forestGreen : AppTheme.softGrey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (!isLast) const Divider(),
+                            ],
+                          );
+                        },
+                        childCount: tickets.length,
                       ),
-                      child: Icon(
-                        isCompleted ? Icons.check_circle_outline_rounded : Icons.cancel_outlined,
-                        color: isCompleted ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                    ),
+                  );
+                },
+                loading: () => SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: AppTheme.margin),
+                    child: Column(
+                      children: List.generate(
+                        4,
+                        (index) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: AppTheme.space16),
+                          child: Row(
+                            children: [
+                              Container(height: 30, width: 50, decoration: BoxDecoration(color: AppTheme.mintTint, borderRadius: BorderRadius.circular(6))),
+                              const SizedBox(width: AppTheme.space16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(height: 14, width: 120, decoration: BoxDecoration(color: AppTheme.mintTint, borderRadius: BorderRadius.circular(4))),
+                                    const SizedBox(height: 6),
+                                    Container(height: 12, width: 80, decoration: BoxDecoration(color: AppTheme.mintTint.withOpacity(0.5), borderRadius: BorderRadius.circular(4))),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
-                    title: Text(
-                      '${t.ticketNumber} • ${t.serviceName}',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                    ),
-                    subtitle: Text(
-                      '${t.branchName} • Status: ${t.status}',
-                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                    ),
-                    trailing: Text(
-                      t.createdAt.split('T')[0],
-                      style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                  ),
+                ),
+                error: (err, _) => SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: AppTheme.margin),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Unable to load history', style: AppTheme.titleMedium),
+                        const SizedBox(height: AppTheme.space8),
+                        const Text('Check your network connection and retry.', style: AppTheme.body),
+                        const SizedBox(height: AppTheme.space16),
+                        ElevatedButton(
+                          onPressed: () => ref.refresh(ticketHistoryProvider),
+                          child: const Text('Try again'),
+                        ),
+                      ],
                     ),
                   ),
-                );
-              },
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, _) => Center(child: Text('Error: $err')),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

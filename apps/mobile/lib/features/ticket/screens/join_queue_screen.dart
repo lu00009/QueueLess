@@ -1,32 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../ticket/providers/ticket_provider.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../discovery/models/branch_model.dart';
+import '../../ticket/providers/ticket_provider.dart';
 
 class JoinQueueScreen extends ConsumerStatefulWidget {
   final BranchServiceModel service;
   final BranchModel branch;
 
-  const JoinQueueScreen({super.key, required this.service, required this.branch});
+  const JoinQueueScreen({
+    super.key,
+    required this.service,
+    required this.branch,
+  });
 
   @override
   ConsumerState<JoinQueueScreen> createState() => _JoinQueueScreenState();
 }
 
 class _JoinQueueScreenState extends ConsumerState<JoinQueueScreen> {
-  final _nameController = TextEditingController();
-  final _phoneController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
   bool _submitting = false;
-  String? _error;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    final auth = ref.read(authStateProvider);
-    _nameController.text = auth.user?.fullName ?? '';
-    _phoneController.text = auth.user?.phone ?? '';
+    final user = ref.read(authStateProvider).user;
+    if (user != null) {
+      _nameController.text = user.fullName;
+      if (user.phone != null) _phoneController.text = user.phone!;
+    }
   }
 
   @override
@@ -36,28 +44,32 @@ class _JoinQueueScreenState extends ConsumerState<JoinQueueScreen> {
     super.dispose();
   }
 
-  void _handleJoin() async {
+  Future<void> _submitJoin() async {
+    if (!_formKey.currentState!.validate()) return;
+
     setState(() {
       _submitting = true;
-      _error = null;
+      _errorMessage = null;
     });
 
     try {
       final ticket = await ref.read(ticketActionProvider.notifier).joinQueue(
             serviceId: widget.service.id,
             customerName: _nameController.text.trim(),
-            customerPhone: _phoneController.text.trim(),
+            customerPhone: _phoneController.text.trim().isNotEmpty
+                ? _phoneController.text.trim()
+                : null,
           );
 
-      if (mounted && ticket != null) {
-        // Refresh active tickets provider
-        ref.refresh(activeTicketsProvider);
-        context.pushReplacement('/ticket/${ticket.id}', extra: ticket);
+      if (ticket != null && mounted) {
+        context.go('/ticket/${ticket.id}', extra: ticket);
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.toString().replaceAll('Exception: ', '');
+          _errorMessage = e.toString().contains('already have an active ticket')
+              ? 'You already have an active ticket for this service.'
+              : 'Could not enter queue. Please verify connection and try again.';
           _submitting = false;
         });
       }
@@ -67,117 +79,121 @@ class _JoinQueueScreenState extends ConsumerState<JoinQueueScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppTheme.offWhite,
       appBar: AppBar(
-        title: const Text('Join Queue', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Enter queue'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Service Card Hero
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF4F46E5), Color(0xFF3730A3)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
+      body: SafeArea(
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: AppTheme.margin, vertical: AppTheme.space16),
+            children: [
+              // Large Title
+              const Text('Your visit details', style: AppTheme.titleLarge),
+              const SizedBox(height: AppTheme.space8),
+              Text(
+                'Confirm the department and your contact info so staff can summon you when ready.',
+                style: AppTheme.caption,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.branch.name,
-                    style: const TextStyle(color: Color(0xFFE0E7FF), fontSize: 13, fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    widget.service.name,
-                    style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      const Icon(Icons.timer_outlined, color: Color(0xFFE0E7FF), size: 16),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Estimated Service Duration: ${widget.service.estimatedDurationMinutes} mins',
-                        style: const TextStyle(color: Color(0xFFE0E7FF), fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
 
-            if (_error != null)
+              const SizedBox(height: AppTheme.space24),
+
+              // Selected Service Summary Card (Mint surface)
               Container(
-                margin: const EdgeInsets.only(bottom: 20),
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(AppTheme.space16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFEF2F2),
-                  border: Border.all(color: const Color(0xFFF87171)),
-                  borderRadius: BorderRadius.circular(12),
+                  color: AppTheme.mintTint,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSheet),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.error_outline_rounded, color: Colors.red, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(_error!, style: const TextStyle(color: Color(0xFF991B1B), fontSize: 12)),
+                    Text(widget.service.name, style: AppTheme.bodyMedium),
+                    const SizedBox(height: AppTheme.space4),
+                    Text(widget.branch.name, style: AppTheme.caption),
+                    const SizedBox(height: AppTheme.space8),
+                    Row(
+                      children: [
+                        const Icon(Icons.timer_outlined, size: 16, color: AppTheme.forestGreen),
+                        const SizedBox(width: AppTheme.space4),
+                        Text(
+                          'Estimated wait time: ~${widget.service.estimatedDurationMinutes} min',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.forestGreen,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
 
-            // Form
-            const Text(
-              'Confirm Patient / Customer Details',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
-            ),
-            const SizedBox(height: 12),
+              const SizedBox(height: AppTheme.space32),
 
-            TextField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                labelText: 'Full Name',
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-              ),
-            ),
-            const SizedBox(height: 14),
+              // Error notification if present
+              if (_errorMessage != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(AppTheme.space16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(AppTheme.radiusInput),
+                    border: Border.all(color: Colors.red.shade200),
+                  ),
+                  child: Text(
+                    _errorMessage!,
+                    style: TextStyle(fontSize: 13, color: Colors.red.shade800),
+                  ),
+                ),
+                const SizedBox(height: AppTheme.space16),
+              ],
 
-            TextField(
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              decoration: InputDecoration(
-                labelText: 'Phone Number (For SMS / Call notifications)',
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+              // Input: Customer Name
+              const Text('Full name', style: AppTheme.captionMedium),
+              const SizedBox(height: AppTheme.space8),
+              TextFormField(
+                controller: _nameController,
+                style: AppTheme.body,
+                decoration: const InputDecoration(
+                  hintText: 'Enter your name',
+                ),
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) return 'Please provide your name';
+                  return null;
+                },
               ),
-            ),
-            const SizedBox(height: 32),
 
-            ElevatedButton(
-              onPressed: _submitting ? null : _handleJoin,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4F46E5),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              const SizedBox(height: AppTheme.space24),
+
+              // Input: Phone Number (Optional)
+              const Text('Phone number (optional)', style: AppTheme.captionMedium),
+              const SizedBox(height: AppTheme.space8),
+              TextFormField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                style: AppTheme.body,
+                decoration: const InputDecoration(
+                  hintText: 'For SMS notifications when your turn approaches',
+                ),
               ),
-              child: _submitting
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Text('Confirm & Take Digital Ticket', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-            ),
-          ],
+
+              const SizedBox(height: AppTheme.space32),
+
+              // Single Primary Action Button
+              ElevatedButton(
+                onPressed: _submitting ? null : _submitJoin,
+                child: _submitting
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.white),
+                      )
+                    : const Text('Get digital ticket'),
+              ),
+            ],
+          ),
         ),
       ),
     );
