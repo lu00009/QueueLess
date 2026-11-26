@@ -1,11 +1,24 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../models/ticket_model.dart';
+import '../services/local_ticket_storage.dart';
 
 final activeTicketsProvider = FutureProvider.autoDispose<List<TicketModel>>((ref) async {
-  final response = await ApiClient.dio.get('/tickets/active');
-  final list = response.data['data'] as List<dynamic>;
-  return list.map((item) => TicketModel.fromJson(item as Map<String, dynamic>)).toList();
+  try {
+    final response = await ApiClient.dio.get('/tickets/active');
+    final list = response.data['data'] as List<dynamic>;
+    final tickets = list.map((item) => TicketModel.fromJson(item as Map<String, dynamic>)).toList();
+    // Cache tickets locally for offline availability
+    await LocalTicketStorage.cacheActiveTickets(tickets);
+    return tickets;
+  } catch (e) {
+    // Return cached offline tickets if network request fails
+    final cached = await LocalTicketStorage.getCachedActiveTickets();
+    if (cached.isNotEmpty) {
+      return cached;
+    }
+    rethrow;
+  }
 });
 
 final ticketHistoryProvider = FutureProvider.autoDispose<List<TicketModel>>((ref) async {
@@ -15,8 +28,19 @@ final ticketHistoryProvider = FutureProvider.autoDispose<List<TicketModel>>((ref
 });
 
 final ticketDetailProvider = FutureProvider.family.autoDispose<TicketModel, String>((ref, ticketId) async {
-  final response = await ApiClient.dio.get('/tickets/$ticketId');
-  return TicketModel.fromJson(response.data['data'] as Map<String, dynamic>);
+  try {
+    final response = await ApiClient.dio.get('/tickets/$ticketId');
+    final ticket = TicketModel.fromJson(response.data['data'] as Map<String, dynamic>);
+    await LocalTicketStorage.cacheTicket(ticket);
+    return ticket;
+  } catch (e) {
+    // If offline, check local storage
+    final cached = await LocalTicketStorage.getCachedTicketById(ticketId);
+    if (cached != null) {
+      return cached;
+    }
+    rethrow;
+  }
 });
 
 class TicketActionNotifier extends StateNotifier<AsyncValue<TicketModel?>> {

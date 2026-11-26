@@ -66,4 +66,38 @@ class TicketModel {
       createdAt: json['createdAt'] ?? '',
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'ticketNumber': ticketNumber,
+      'sequenceNumber': sequenceNumber,
+      'status': status,
+      'customerName': customerName,
+      'customerPhone': customerPhone,
+      'verificationCode': verificationCode,
+      'currentPosition': currentPosition,
+      'estimatedWaitMinutes': estimatedWaitMinutes,
+      'serviceId': serviceId,
+      'createdAt': createdAt,
+      'service': {
+        'id': serviceId,
+        'name': serviceName,
+        'code': serviceCode,
+      },
+      'branch': {
+        'id': branchId,
+        'name': branchName,
+        'organization': {
+          'name': organizationName,
+        },
+      },
+      'counter': counterNumber != null
+          ? {
+              'number': counterNumber,
+              'name': counterName,
+            }
+          : null,
+    };
+  }
 }

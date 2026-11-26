@@ -13,6 +13,7 @@ import 'features/discovery/models/branch_model.dart';
 import 'features/ticket/screens/join_queue_screen.dart';
 import 'features/ticket/screens/digital_ticket_screen.dart';
 import 'features/ticket/screens/ticket_history_screen.dart';
+import 'features/ticket/screens/qr_ticket_scanner_screen.dart';
 import 'features/ticket/models/ticket_model.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -87,6 +88,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/history',
         builder: (context, state) => const TicketHistoryScreen(),
+      ),
+      GoRoute(
+        path: '/scan',
+        builder: (context, state) => const QrTicketScannerScreen(),
       ),
     ],
   );
