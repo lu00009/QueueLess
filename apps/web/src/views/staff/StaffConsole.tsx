@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../../context/AuthContext';
 import { apiClient } from '../../api/client';
 import {
@@ -236,6 +237,45 @@ export const StaffConsole: React.FC = () => {
       fetchCurrentCounterTicket(selectedCounterId);
     }
   }, [selectedCounterId, counters, fetchCurrentCounterTicket]);
+
+  // Real-time Socket.IO Connection and Room Subscription
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    const socket: Socket = io({
+      auth: { token: token ? `Bearer ${token}` : undefined },
+      path: '/socket.io/',
+      transports: ['websocket', 'polling'],
+    });
+
+    if (selectedBranchId) {
+      socket.emit('room:join', { room: `branch:${selectedBranchId}` });
+    }
+    if (selectedQueueId) {
+      socket.emit('room:join', { room: `queue:${selectedQueueId}` });
+    }
+
+    // Live Queue Events
+    const handleQueueChange = () => {
+      refreshAll();
+    };
+
+    socket.on('queue:ticket:created', handleQueueChange);
+    socket.on('queue:ticket:called', handleQueueChange);
+    socket.on('queue:ticket:serving', handleQueueChange);
+    socket.on('queue:ticket:completed', handleQueueChange);
+    socket.on('queue:ticket:skipped', handleQueueChange);
+    socket.on('queue:ticket:recalled', handleQueueChange);
+
+    return () => {
+      if (selectedBranchId) {
+        socket.emit('room:leave', { room: `branch:${selectedBranchId}` });
+      }
+      if (selectedQueueId) {
+        socket.emit('room:leave', { room: `queue:${selectedQueueId}` });
+      }
+      socket.disconnect();
+    };
+  }, [selectedBranchId, selectedQueueId]);
 
   const refreshAll = () => {
     if (selectedBranchId) {

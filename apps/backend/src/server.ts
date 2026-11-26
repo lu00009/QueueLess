@@ -4,11 +4,13 @@ import { createApp } from './app';
 import { ENV } from './config/env';
 import { connectDatabase, prisma } from './config/database';
 
+import { SocketGateway } from './sockets/socket.gateway';
+
 async function bootstrap() {
   const app = createApp();
   const server = http.createServer(app);
 
-  // Initialize Socket.IO
+  // Initialize Socket.IO with auth and rooms gateway
   const io = new SocketIOServer(server, {
     cors: {
       origin: '*',
@@ -16,13 +18,7 @@ async function bootstrap() {
     },
   });
 
-  io.on('connection', (socket) => {
-    console.log(`[Socket] Client connected: ${socket.id}`);
-
-    socket.on('disconnect', () => {
-      console.log(`[Socket] Client disconnected: ${socket.id}`);
-    });
-  });
+  SocketGateway.initialize(io);
 
   // Connect to Database
   await connectDatabase();

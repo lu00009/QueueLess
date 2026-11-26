@@ -1,7 +1,8 @@
 import { prisma } from '../config/database';
 import { AppError } from '../middleware/error.middleware';
-import { TicketStatus, TicketEventType, CounterStatus } from '@prisma/client';
+import { TicketStatus, TicketEventType, CounterStatus, NotificationType } from '@prisma/client';
 import crypto from 'crypto';
+import { NotificationService } from './notification.service';
 
 export class QueueEngineService {
   /**
@@ -192,6 +193,29 @@ export class QueueEngineService {
         },
       });
 
+      // Broadcast real-time ticket called event to Socket rooms
+      NotificationService.broadcastTicketEvent({
+        event: 'queue:ticket:called',
+        ticket,
+        extra: {
+          counterNumber: counter.number,
+          counterName: counter.name,
+          calledAt: ticket.calledAt,
+        },
+      });
+
+      // If customer has a registered account, notify them directly
+      if (ticket.userId) {
+        NotificationService.dispatchNotification({
+          userId: ticket.userId,
+          ticketId: ticket.id,
+          type: NotificationType.CALLED,
+          title: `You're Being Called!`,
+          message: `Ticket ${ticket.ticketNumber} please proceed to Counter ${counter.number}.`,
+          data: { counterNumber: counter.number, ticketNumber: ticket.ticketNumber },
+        }).catch(() => {});
+      }
+
       return ticket;
     });
   }
@@ -282,6 +306,11 @@ export class QueueEngineService {
         },
       });
 
+      NotificationService.broadcastTicketEvent({
+        event: 'queue:ticket:serving',
+        ticket: updated,
+      });
+
       return updated;
     });
   }
@@ -333,6 +362,12 @@ export class QueueEngineService {
           newStatus: TicketStatus.COMPLETED,
           metadata: { durationSeconds },
         },
+      });
+
+      NotificationService.broadcastTicketEvent({
+        event: 'queue:ticket:completed',
+        ticket: updated,
+        extra: { durationSeconds },
       });
 
       return {
