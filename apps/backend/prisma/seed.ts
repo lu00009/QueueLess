@@ -34,6 +34,138 @@ async function main() {
     },
   });
 
+  // Branch 1: Main Campus
+  const mainBranch = await prisma.branch.upsert({
+    where: {
+      organizationId_code: {
+        organizationId: orgMetro.id,
+        code: 'MAIN',
+      },
+    },
+    update: {},
+    create: {
+      organizationId: orgMetro.id,
+      name: 'Metro Health Main Campus',
+      code: 'MAIN',
+      address: '100 Medical Center Way, New York, NY 10001',
+      phone: '+1 (555) 234-5678',
+      latitude: 40.730610,
+      longitude: -73.935242,
+      isActive: true,
+    },
+  });
+
+  // Operating Hours (Mon-Sat 8:00 - 18:00)
+  for (let day = 0; day <= 6; day++) {
+    await prisma.operatingHour.upsert({
+      where: { branchId_dayOfWeek: { branchId: mainBranch.id, dayOfWeek: day } },
+      update: {},
+      create: {
+        branchId: mainBranch.id,
+        dayOfWeek: day,
+        openTime: '08:00',
+        closeTime: day === 0 ? '14:00' : '18:00',
+        isClosed: day === 0,
+      },
+    });
+  }
+
+  // Services
+  const genService = await prisma.service.upsert({
+    where: { branchId_code: { branchId: mainBranch.id, code: 'GEN' } },
+    update: {},
+    create: {
+      organizationId: orgMetro.id,
+      branchId: mainBranch.id,
+      name: 'General Consultation',
+      code: 'GEN',
+      description: 'Primary healthcare and outpatient check-ups',
+      estimatedDurationMinutes: 15,
+      priorityLevel: 2,
+    },
+  });
+
+  const pharmService = await prisma.service.upsert({
+    where: { branchId_code: { branchId: mainBranch.id, code: 'PHARM' } },
+    update: {},
+    create: {
+      organizationId: orgMetro.id,
+      branchId: mainBranch.id,
+      name: 'Pharmacy & Dispensing',
+      code: 'PHARM',
+      description: 'Prescription pickup and medication counsel',
+      estimatedDurationMinutes: 5,
+      priorityLevel: 1,
+    },
+  });
+
+  // Queues & Configurations
+  for (const s of [genService, pharmService]) {
+    const q = await prisma.queue.upsert({
+      where: { branchId_serviceId: { branchId: mainBranch.id, serviceId: s.id } },
+      update: {},
+      create: {
+        organizationId: orgMetro.id,
+        branchId: mainBranch.id,
+        serviceId: s.id,
+        name: `${s.name} Queue`,
+        prefix: s.code.slice(0, 2),
+      },
+    });
+
+    await prisma.queueConfiguration.upsert({
+      where: { queueId: q.id },
+      update: {},
+      create: {
+        queueId: q.id,
+        maxWaitingCapacity: 100,
+        autoCallNext: false,
+        allowRemoteJoin: true,
+        geofenceRadiusMeters: 5000,
+        notificationThresholdAhead: 3,
+        bufferMinutes: 5,
+      },
+    });
+  }
+
+  // Counters
+  const counter1 = await prisma.serviceCounter.upsert({
+    where: { branchId_number: { branchId: mainBranch.id, number: '1' } },
+    update: {},
+    create: {
+      organizationId: orgMetro.id,
+      branchId: mainBranch.id,
+      name: 'Counter 1 (General)',
+      number: '1',
+      status: 'IDLE',
+    },
+  });
+
+  const counter2 = await prisma.serviceCounter.upsert({
+    where: { branchId_number: { branchId: mainBranch.id, number: '2' } },
+    update: {},
+    create: {
+      organizationId: orgMetro.id,
+      branchId: mainBranch.id,
+      name: 'Counter 2 (Pharmacy)',
+      number: '2',
+      status: 'IDLE',
+    },
+  });
+
+  // Map services to counters
+  await prisma.counterServiceAssignment.upsert({
+    where: { counterId_serviceId: { counterId: counter1.id, serviceId: genService.id } },
+    update: {},
+    create: { counterId: counter1.id, serviceId: genService.id },
+  });
+
+  await prisma.counterServiceAssignment.upsert({
+    where: { counterId_serviceId: { counterId: counter2.id, serviceId: pharmService.id } },
+    update: {},
+    create: { counterId: counter2.id, serviceId: pharmService.id },
+  });
+
   // Metro Health Owner
   const metroOwner = await prisma.user.upsert({
     where: { email: 'owner@metrohealth.com' },
