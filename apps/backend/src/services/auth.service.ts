@@ -75,7 +75,7 @@ export class AuthService {
       where: { email: data.email.toLowerCase().trim() },
       include: {
         memberships: {
-          where: { status: 'ACTIVE' },
+          where: { status: { in: ['ACTIVE', 'INVITED'] } },
           include: {
             organization: true,
           },
@@ -91,6 +91,17 @@ export class AuthService {
     if (!isMatch) {
       throw new AppError('Invalid email or password', 401);
     }
+
+    // Upon successful login with credentials, promote any pending INVITED memberships to ACTIVE
+    await prisma.organizationMembership.updateMany({
+      where: {
+        userId: user.id,
+        status: 'INVITED',
+      },
+      data: {
+        status: 'ACTIVE',
+      },
+    });
 
     const tokenPayload = {
       userId: user.id,

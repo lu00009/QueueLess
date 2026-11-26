@@ -35,8 +35,9 @@ export class TicketController {
 
   static async cancelTicket(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const validated = cancelTicketSchema.parse(req.body);
-      const result = await TicketService.cancelTicket(req.params.id, req.user!.userId, validated.reason);
+      const validated = cancelTicketSchema.parse(req.body || {});
+      const reason = validated?.reason ?? undefined;
+      const result = await TicketService.cancelTicket(req.params.id, req.user!.userId, reason);
       res.status(200).json({ success: true, message: 'Ticket cancelled successfully', data: result });
     } catch (err) { next(err); }
   }

@@ -4,77 +4,64 @@ import { TicketStatus, TicketEventType } from '@prisma/client';
 import crypto from 'crypto';
 
 export class TicketService {
-  static async joinQueue(userId: string, data: {
-    serviceId: string;
-    customerName?: string;
-    customerPhone?: string;
-  }) {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new AppError('User not found', 404);
-
+  static async joinQueue(userId: string, data: { serviceId: string; customerName?: string | null; customerPhone?: string | null }) {
+    // 1. Fetch Service and its Branch
     const service = await prisma.service.findUnique({
       where: { id: data.serviceId },
-      include: {
-        branch: true,
-        queues: {
-          include: { configuration: true },
-        },
-      },
+      include: { branch: true },
     });
 
-    if (!service || !service.isActive) {
-      throw new AppError('Service not found or inactive', 404);
-    }
+    if (!service) throw new AppError('Service not found', 404);
+    if (!service.isActive) throw new AppError('Service is currently inactive', 400);
 
-    if (service.queues.length === 0) {
-      throw new AppError('Queue is not configured for this service', 400);
-    }
+    // 2. Fetch User
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) throw new AppError('User not found', 404);
 
-    const queue = service.queues[0];
-    if (queue.status !== 'OPEN') {
-      throw new AppError(`Queue is currently ${queue.status}. Ticket admission paused.`, 400);
-    }
-
-    // Check duplicate active tickets for user in this queue
-    const activeExisting = await prisma.queueTicket.findFirst({
+    // 3. Find open Queue for this service
+    const queue = await prisma.queue.findFirst({
       where: {
-        userId,
-        queueId: queue.id,
-        status: { in: [TicketStatus.WAITING, TicketStatus.CALLED, TicketStatus.SERVING] },
+        serviceId: service.id,
+        branchId: service.branchId,
+        status: 'OPEN',
       },
     });
 
-    if (activeExisting) {
-      throw new AppError(
-        `You already have an active ticket (#${activeExisting.ticketNumber}) for this service`,
-        409
-      );
-    }
+    if (!queue) throw new AppError('No open queue available for this service at this time', 400);
 
-    // Concurrency-safe atomic sequence increment and ticket creation
+    // 4. Generate Verification Code & Next Sequence Number within Transaction
     return prisma.$transaction(async (tx) => {
-      const updatedQueue = await tx.queue.update({
-        where: { id: queue.id },
-        data: { currentSequence: { increment: 1 } },
+      // Find highest sequence number today for this queue
+      const lastTicket = await tx.queueTicket.findFirst({
+        where: { queueId: queue.id },
+        orderBy: { sequenceNumber: 'desc' },
       });
 
-      const seq = updatedQueue.currentSequence;
-      const prefix = queue.prefix || service.code.slice(0, 2);
-      const ticketNumber = `${prefix}-${String(seq).padStart(3, '0')}`;
+      const nextSequence = (lastTicket?.sequenceNumber || 0) + 1;
+      const ticketNumber = `${service.code}-${String(nextSequence).padStart(3, '0')}`;
       const verificationCode = crypto.randomBytes(3).toString('hex').toUpperCase();
 
-      // Count existing waiting tickets ahead
-      const waitingAhead = await tx.queueTicket.count({
+      // Check max daily limit if set
+      if (service.maxDailyTickets && nextSequence > service.maxDailyTickets) {
+        throw new AppError('Daily ticket capacity reached for this service', 400);
+      }
+
+      // Check if user already has an active ticket for this service
+      const existingTicket = await tx.queueTicket.findFirst({
         where: {
-          queueId: queue.id,
-          status: TicketStatus.WAITING,
+          userId,
+          serviceId: service.id,
+          status: { in: [TicketStatus.WAITING, TicketStatus.CALLED, TicketStatus.SERVING] },
         },
       });
 
-      const position = waitingAhead + 1;
-      const estimatedWaitMinutes = position * service.estimatedDurationMinutes;
-      const estimatedServiceTime = new Date(Date.now() + estimatedWaitMinutes * 60 * 1000);
+      if (existingTicket) {
+        throw new AppError('You already have an active ticket for this service', 409);
+      }
 
+      // Create ticket
       const ticket = await tx.queueTicket.create({
         data: {
           organizationId: service.organizationId,
@@ -82,13 +69,12 @@ export class TicketService {
           serviceId: service.id,
           queueId: queue.id,
           userId,
-          customerName: data.customerName?.trim() || user.fullName,
-          customerPhone: data.customerPhone?.trim() || user.phone,
+          customerName: data.customerName || user.fullName,
+          customerPhone: data.customerPhone || user.phone,
           ticketNumber,
-          sequenceNumber: seq,
+          sequenceNumber: nextSequence,
           priorityScore: service.priorityLevel,
           status: TicketStatus.WAITING,
-          estimatedServiceTime,
           verificationCode,
         },
         include: {
@@ -99,14 +85,36 @@ export class TicketService {
         },
       });
 
+      // Record Ticket Event
       await tx.ticketEvent.create({
         data: {
           ticketId: ticket.id,
           eventType: TicketEventType.ISSUED,
           performedByUserId: userId,
           newStatus: TicketStatus.WAITING,
-          metadata: { initialPosition: position, estimatedWaitMinutes },
+          metadata: { channel: 'MOBILE_APP' },
         },
+      });
+
+      // Calculate initial position & estimated wait
+      const aheadCount = await tx.queueTicket.count({
+        where: {
+          queueId: queue.id,
+          status: TicketStatus.WAITING,
+          sequenceNumber: { lt: nextSequence },
+        },
+      });
+
+      const position = aheadCount + 1;
+      const estimatedWaitMinutes = position * service.estimatedDurationMinutes;
+
+      // Update estimatedServiceTime
+      const estTime = new Date();
+      estTime.setMinutes(estTime.getMinutes() + estimatedWaitMinutes);
+
+      await tx.queueTicket.update({
+        where: { id: ticket.id },
+        data: { estimatedServiceTime: estTime },
       });
 
       return {
@@ -145,7 +153,8 @@ export class TicketService {
             },
           });
           const position = ahead + 1;
-          const estimatedWaitMinutes = position * t.service.estimatedDurationMinutes;
+          const duration = t.service?.estimatedDurationMinutes || 15;
+          const estimatedWaitMinutes = position * duration;
           return { ...t, currentPosition: position, estimatedWaitMinutes };
         }
         return { ...t, currentPosition: 0, estimatedWaitMinutes: 0 };
@@ -173,7 +182,13 @@ export class TicketService {
 
   static async getTicketById(ticketId: string, userId: string) {
     const ticket = await prisma.queueTicket.findFirst({
-      where: { id: ticketId, userId },
+      where: {
+        OR: [
+          { id: ticketId },
+          { ticketNumber: ticketId },
+          { verificationCode: ticketId },
+        ],
+      },
       include: {
         service: true,
         branch: {
@@ -200,7 +215,8 @@ export class TicketService {
         },
       });
       currentPosition = ahead + 1;
-      estimatedWaitMinutes = currentPosition * ticket.service.estimatedDurationMinutes;
+      const duration = ticket.service?.estimatedDurationMinutes || 15;
+      estimatedWaitMinutes = currentPosition * duration;
     }
 
     return {
@@ -210,12 +226,28 @@ export class TicketService {
     };
   }
 
-  static async cancelTicket(ticketId: string, userId: string, reason?: string) {
+  static async cancelTicket(ticketId: string, userId: string, reason?: string | null) {
     const ticket = await prisma.queueTicket.findFirst({
-      where: { id: ticketId, userId },
+      where: {
+        OR: [
+          { id: ticketId },
+          { ticketNumber: ticketId },
+          { verificationCode: ticketId },
+        ],
+      },
     });
 
     if (!ticket) throw new AppError('Ticket not found', 404);
+
+    // If ticket has a userId, only the customer owner or org staff/admin can cancel it
+    if (ticket.userId && ticket.userId !== userId) {
+      const membership = await prisma.organizationMembership.findFirst({
+        where: { userId, organizationId: ticket.organizationId },
+      });
+      if (!membership) {
+        throw new AppError('You are not authorized to cancel this ticket', 403);
+      }
+    }
 
     if (ticket.status !== TicketStatus.WAITING && ticket.status !== TicketStatus.CALLED) {
       throw new AppError(`Cannot cancel a ticket in "${ticket.status}" status`, 400);
@@ -223,7 +255,7 @@ export class TicketService {
 
     return prisma.$transaction(async (tx) => {
       const updated = await tx.queueTicket.update({
-        where: { id: ticketId },
+        where: { id: ticket.id },
         data: {
           status: TicketStatus.CANCELLED,
           cancelledAt: new Date(),
@@ -234,7 +266,7 @@ export class TicketService {
 
       await tx.ticketEvent.create({
         data: {
-          ticketId,
+          ticketId: ticket.id,
           eventType: TicketEventType.CANCELLED,
           performedByUserId: userId,
           previousStatus: ticket.status,

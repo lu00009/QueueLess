@@ -142,7 +142,7 @@ class TicketHistoryScreen extends ConsumerWidget {
                                   children: [
                                     Container(height: 14, width: 120, decoration: BoxDecoration(color: AppTheme.mintTint, borderRadius: BorderRadius.circular(4))),
                                     const SizedBox(height: 6),
-                                    Container(height: 12, width: 80, decoration: BoxDecoration(color: AppTheme.mintTint.withOpacity(0.5), borderRadius: BorderRadius.circular(4))),
+                                    Container(height: 12, width: 80, decoration: BoxDecoration(color: AppTheme.mintTint.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(4))),
                                   ],
                                 ),
                               ),

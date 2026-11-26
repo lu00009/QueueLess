@@ -1,4 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
+import { ZodError } from 'zod';
+import { Prisma } from '@prisma/client';
 
 export class AppError extends Error {
   public statusCode: number;
@@ -18,9 +20,32 @@ export function errorHandler(
   res: Response,
   next: NextFunction
 ) {
-  const statusCode = err instanceof AppError ? err.statusCode : 500;
-  const message = err.message || 'Internal Server Error';
-  const details = err instanceof AppError ? err.details : undefined;
+  let statusCode = 500;
+  let message = err.message || 'Internal Server Error';
+  let details: any = undefined;
+
+  if (err instanceof AppError) {
+    statusCode = err.statusCode;
+    details = err.details;
+  } else if (err instanceof ZodError || err.name === 'ZodError') {
+    statusCode = 400;
+    message = 'Validation failed';
+    details = (err as any).errors?.map((e: any) => ({
+      path: e.path?.join('.'),
+      message: e.message,
+    })) || err.message;
+  } else if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    if (err.code === 'P2002') {
+      statusCode = 409;
+      message = 'A resource with this identifier already exists';
+    } else if (err.code === 'P2025') {
+      statusCode = 404;
+      message = 'Resource not found';
+    } else {
+      statusCode = 400;
+      message = err.message;
+    }
+  }
 
   console.error(`[Error] ${req.method} ${req.url} - ${statusCode}: ${message}`);
   if (statusCode === 500 && process.env.NODE_ENV === 'development') {

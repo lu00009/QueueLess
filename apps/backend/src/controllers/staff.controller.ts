@@ -46,4 +46,12 @@ export class StaffController {
       res.status(200).json({ success: true, message: 'Staff member removed from organization' });
     } catch (err) { next(err); }
   }
+
+  static async activate(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const orgId = req.membership?.organizationId || req.params.organizationId || req.params.id;
+      const result = await StaffService.activate(orgId, req.params.userId);
+      res.status(200).json({ success: true, message: 'Staff member activated successfully', data: result });
+    } catch (err) { next(err); }
+  }
 }

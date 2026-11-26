@@ -70,6 +70,7 @@ export function requireOrgAccess(allowedOrgRoles?: OrgRole[]) {
       (req.headers['x-organization-id'] as string) ||
       req.params.organizationId ||
       req.params.orgId ||
+      req.params.id ||
       req.body.organizationId;
 
     if (!orgId) {

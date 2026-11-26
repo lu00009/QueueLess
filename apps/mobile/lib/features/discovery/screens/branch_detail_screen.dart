@@ -104,7 +104,7 @@ class BranchDetailScreen extends StatelessWidget {
           'branch': branch,
         });
       },
-      splashColor: AppTheme.mintTint.withOpacity(0.5),
+      splashColor: AppTheme.mintTint.withValues(alpha: 0.5),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: AppTheme.space16),
         child: Row(

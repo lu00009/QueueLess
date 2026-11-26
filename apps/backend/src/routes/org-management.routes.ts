@@ -145,7 +145,7 @@ orgManagementRouter.post(
 orgManagementRouter.patch(
   '/organizations/:id/staff/:userId/role',
   authenticateToken,
-  requireOrgAccess([OrgRole.ORG_OWNER]),
+  requireOrgAccess([OrgRole.ORG_OWNER, OrgRole.ORG_ADMIN]),
   StaffController.updateRole
 );
 orgManagementRouter.post(
@@ -157,8 +157,14 @@ orgManagementRouter.post(
 orgManagementRouter.delete(
   '/organizations/:id/staff/:userId',
   authenticateToken,
-  requireOrgAccess([OrgRole.ORG_OWNER]),
+  requireOrgAccess([OrgRole.ORG_OWNER, OrgRole.ORG_ADMIN]),
   StaffController.remove
+);
+orgManagementRouter.post(
+  '/organizations/:id/staff/:userId/activate',
+  authenticateToken,
+  requireOrgAccess([OrgRole.ORG_OWNER, OrgRole.ORG_ADMIN]),
+  StaffController.activate
 );
 
 // ==========================================

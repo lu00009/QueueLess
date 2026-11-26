@@ -11,8 +11,6 @@ import {
   Pause,
   AlertCircle,
   Clock,
-  ChevronRight,
-  ShieldAlert,
   Phone,
   User,
   Activity,
@@ -297,10 +295,10 @@ export const StaffConsole: React.FC = () => {
         {},
         { headers: { 'X-Organization-Id': orgId } }
       );
-      showNotification(`Ticket ${res.data.data.ticketNumber} called to Counter!`);
+      showNotification(`Ticket ${res.data.data.ticketNumber} called to counter`);
       refreshAll();
     } catch (err: any) {
-      showNotification(err.response?.data?.message || 'No eligible tickets waiting to call', true);
+      showNotification(err.response?.data?.message || 'No eligible tickets waiting in queue', true);
     } finally {
       setActionLoading(false);
     }
@@ -315,7 +313,7 @@ export const StaffConsole: React.FC = () => {
         {},
         { headers: { 'X-Organization-Id': orgId } }
       );
-      showNotification(`Ticket ${res.data.data.ticketNumber} called successfully!`);
+      showNotification(`Ticket ${res.data.data.ticketNumber} called`);
       refreshAll();
     } catch (err: any) {
       showNotification(err.response?.data?.message || 'Failed to call ticket', true);
@@ -333,7 +331,7 @@ export const StaffConsole: React.FC = () => {
         {},
         { headers: { 'X-Organization-Id': orgId } }
       );
-      showNotification(`Service started for Ticket ${activeTicket.ticketNumber}`);
+      showNotification(`Service started for ticket ${activeTicket.ticketNumber}`);
       refreshAll();
     } catch (err: any) {
       showNotification(err.response?.data?.message || 'Failed to start serving', true);
@@ -351,7 +349,7 @@ export const StaffConsole: React.FC = () => {
         {},
         { headers: { 'X-Organization-Id': orgId } }
       );
-      showNotification(`Ticket ${activeTicket.ticketNumber} completed successfully!`);
+      showNotification(`Ticket ${activeTicket.ticketNumber} completed`);
       setActiveTicket(null);
       refreshAll();
     } catch (err: any) {
@@ -370,7 +368,7 @@ export const StaffConsole: React.FC = () => {
         { reason: skipReason },
         { headers: { 'X-Organization-Id': orgId } }
       );
-      showNotification(`Ticket ${activeTicket.ticketNumber} skipped`);
+      showNotification(`Ticket ${activeTicket.ticketNumber} marked as skipped`);
       setSkipModalOpen(false);
       setActiveTicket(null);
       refreshAll();
@@ -390,7 +388,7 @@ export const StaffConsole: React.FC = () => {
         { counterId: selectedCounterId },
         { headers: { 'X-Organization-Id': orgId } }
       );
-      showNotification(`Ticket ${res.data.data.ticketNumber} recalled to counter!`);
+      showNotification(`Ticket ${res.data.data.ticketNumber} recalled to counter`);
       refreshAll();
     } catch (err: any) {
       showNotification(err.response?.data?.message || 'Failed to recall ticket', true);
@@ -408,7 +406,7 @@ export const StaffConsole: React.FC = () => {
         { status: newStatus },
         { headers: { 'X-Organization-Id': orgId } }
       );
-      showNotification(`Counter set to ${newStatus}`);
+      showNotification(`Counter set to ${newStatus.toLowerCase()}`);
       refreshAll();
     } catch (err: any) {
       showNotification(err.response?.data?.message || 'Failed to update counter status', true);
@@ -461,32 +459,32 @@ export const StaffConsole: React.FC = () => {
 
       {/* Notifications Toast */}
       {errorMsg && (
-        <div className="bg-rose-500/15 border-b border-rose-500/30 px-6 py-2.5 flex items-center justify-between text-xs text-rose-300 animate-in slide-in-from-top duration-200">
+        <div className="bg-[#FFF5F5] border-b border-[#FED7D7] px-6 py-2.5 flex items-center justify-between text-xs text-[#C53030] animate-in slide-in-from-top duration-200">
           <div className="flex items-center space-x-2">
-            <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" />
+            <AlertCircle className="h-4 w-4 text-[#E53E3E] shrink-0" />
             <span>{errorMsg}</span>
           </div>
-          <button onClick={() => setErrorMsg(null)} className="text-rose-400 hover:text-rose-200">✕</button>
+          <button onClick={() => setErrorMsg(null)} className="text-[#C53030] hover:text-[#9B2C2C]">✕</button>
         </div>
       )}
       {successMsg && (
-        <div className="bg-emerald-500/15 border-b border-emerald-500/30 px-6 py-2.5 flex items-center justify-between text-xs text-emerald-300 animate-in slide-in-from-top duration-200">
+        <div className="bg-[#E8F3EC] border-b border-[#C6E2D0] px-6 py-2.5 flex items-center justify-between text-xs text-[#1F5C3A] animate-in slide-in-from-top duration-200">
           <div className="flex items-center space-x-2">
-            <CheckCircle className="h-4 w-4 text-emerald-400 shrink-0" />
+            <CheckCircle className="h-4 w-4 text-[#1F5C3A] shrink-0" />
             <span>{successMsg}</span>
           </div>
-          <button onClick={() => setSuccessMsg(null)} className="text-emerald-400 hover:text-emerald-200">✕</button>
+          <button onClick={() => setSuccessMsg(null)} className="text-[#1F5C3A] hover:text-[#18482E]">✕</button>
         </div>
       )}
 
       {/* Main Operational Layout */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
         {/* Top Control Bar: Branch & Counter Selector */}
-        <section className="bg-slate-900/90 border border-slate-800/80 rounded-2xl p-4 shadow-xl backdrop-blur-sm flex flex-wrap items-center justify-between gap-4">
+        <section className="bg-white border border-[#E5E7EB] rounded-[16px] p-4 flex flex-wrap items-center justify-between gap-4 shadow-sm">
           <div className="flex flex-wrap items-center gap-4">
             {/* Branch Selector */}
             <div className="flex items-center space-x-2">
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Branch:</span>
+              <span className="text-xs font-medium text-[#6B7A72]">Branch</span>
               <select
                 value={selectedBranchId}
                 onChange={(e) => {
@@ -494,7 +492,7 @@ export const StaffConsole: React.FC = () => {
                   setSelectedCounterId('');
                   setSelectedQueueId('');
                 }}
-                className="bg-slate-800/90 border border-slate-700 text-white text-xs rounded-xl px-3 py-2 focus:ring-2 focus:ring-sky-500 outline-none"
+                className="bg-[#FAFAF7] border border-[#E5E7EB] text-[#14201A] text-xs font-medium rounded-[12px] px-3 py-2 focus:ring-1 focus:ring-[#1F5C3A] outline-none"
               >
                 {branches.map((b) => (
                   <option key={b.id} value={b.id}>
@@ -506,11 +504,11 @@ export const StaffConsole: React.FC = () => {
 
             {/* Counter Selector */}
             <div className="flex items-center space-x-2">
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">My Counter:</span>
+              <span className="text-xs font-medium text-[#6B7A72]">Counter</span>
               <select
                 value={selectedCounterId}
                 onChange={(e) => setSelectedCounterId(e.target.value)}
-                className="bg-slate-800/90 border border-slate-700 text-white text-xs rounded-xl px-3 py-2 focus:ring-2 focus:ring-sky-500 outline-none font-medium"
+                className="bg-[#FAFAF7] border border-[#E5E7EB] text-[#14201A] text-xs font-medium rounded-[12px] px-3 py-2 focus:ring-1 focus:ring-[#1F5C3A] outline-none"
               >
                 {counters.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -524,26 +522,25 @@ export const StaffConsole: React.FC = () => {
             {currentCounter && (
               <div className="flex items-center space-x-2">
                 <span
-                  className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${
+                  className={`inline-flex items-center px-2.5 py-1 rounded-[12px] text-xs font-medium ${
                     currentCounter.status === 'SERVING'
-                      ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                      ? 'bg-[#E8F3EC] text-[#1F5C3A] border border-[#C6E2D0]'
                       : currentCounter.status === 'IDLE'
-                      ? 'bg-sky-500/15 text-sky-400 border border-sky-500/30'
+                      ? 'bg-[#E8F3EC] text-[#1F5C3A] border border-[#C6E2D0]'
                       : currentCounter.status === 'PAUSED'
-                      ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
-                      : 'bg-slate-800 text-slate-400 border border-slate-700'
+                      ? 'bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A]'
+                      : 'bg-[#F3F4F6] text-[#6B7A72] border border-[#E5E7EB]'
                   }`}
                 >
-                  <span className={`h-1.5 w-1.5 rounded-full mr-1.5 ${
-                    currentCounter.status === 'SERVING'
-                      ? 'bg-emerald-400 animate-pulse'
-                      : currentCounter.status === 'IDLE'
-                      ? 'bg-sky-400'
+                  {/* Single lime accent on active state */}
+                  <span className={`h-2 w-2 rounded-full mr-1.5 ${
+                    currentCounter.status === 'SERVING' || currentCounter.status === 'IDLE'
+                      ? 'bg-[#B7E36B]'
                       : currentCounter.status === 'PAUSED'
                       ? 'bg-amber-400'
-                      : 'bg-slate-500'
+                      : 'bg-[#9CA3AF]'
                   }`} />
-                  {currentCounter.status}
+                  {currentCounter.status === 'SERVING' ? 'Serving' : currentCounter.status === 'IDLE' ? 'Idle' : currentCounter.status === 'PAUSED' ? 'Paused' : currentCounter.status}
                 </span>
 
                 {/* Pause / Resume Controls */}
@@ -551,42 +548,42 @@ export const StaffConsole: React.FC = () => {
                   <button
                     onClick={() => handleToggleCounterStatus('PAUSED')}
                     disabled={actionLoading}
-                    className="px-2.5 py-1 rounded-lg text-xs bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/20 transition flex items-center space-x-1"
+                    className="px-3 py-1.5 rounded-[12px] text-xs font-medium bg-white hover:bg-[#FAFAF7] text-[#6B7A72] border border-[#E5E7EB] transition flex items-center space-x-1.5"
                   >
                     <Pause className="h-3 w-3" />
-                    <span>Pause Counter</span>
+                    <span>Pause counter</span>
                   </button>
                 )}
                 {currentCounter.status === 'PAUSED' && (
                   <button
                     onClick={() => handleToggleCounterStatus('IDLE')}
                     disabled={actionLoading}
-                    className="px-2.5 py-1 rounded-lg text-xs bg-slate-800 hover:bg-slate-700 text-sky-400 border border-sky-500/20 transition flex items-center space-x-1"
+                    className="px-3 py-1.5 rounded-[12px] text-xs font-semibold bg-[#1F5C3A] hover:bg-[#18482E] text-white transition flex items-center space-x-1.5"
                   >
                     <Play className="h-3 w-3" />
-                    <span>Resume Counter</span>
+                    <span>Resume counter</span>
                   </button>
                 )}
               </div>
             )}
           </div>
 
-          {/* Quick Metrics Bar */}
+          {/* Metrics */}
           {stats && (
-            <div className="flex items-center space-x-6 text-xs text-slate-300">
+            <div className="flex items-center space-x-6 text-xs">
               <div>
-                <span className="text-slate-500 block text-[10px] font-semibold uppercase">Waiting</span>
-                <span className="text-sm font-bold text-sky-400">{stats.waitingCount}</span>
+                <span className="text-[#6B7A72] block text-[11px]">Waiting</span>
+                <span className="text-base font-semibold text-[#14201A]">{stats.waitingCount}</span>
               </div>
-              <div className="h-6 w-px bg-slate-800" />
+              <div className="h-6 w-px bg-[#E5E7EB]" />
               <div>
-                <span className="text-slate-500 block text-[10px] font-semibold uppercase">Served Today</span>
-                <span className="text-sm font-bold text-emerald-400">{stats.completedTodayCount}</span>
+                <span className="text-[#6B7A72] block text-[11px]">Served today</span>
+                <span className="text-base font-semibold text-[#1F5C3A]">{stats.completedTodayCount}</span>
               </div>
-              <div className="h-6 w-px bg-slate-800" />
+              <div className="h-6 w-px bg-[#E5E7EB]" />
               <div>
-                <span className="text-slate-500 block text-[10px] font-semibold uppercase">Avg Service</span>
-                <span className="text-sm font-bold text-indigo-400">
+                <span className="text-[#6B7A72] block text-[11px]">Average service</span>
+                <span className="text-base font-semibold text-[#14201A]">
                   {stats.avgServiceTimeMinutes > 0 ? `${stats.avgServiceTimeMinutes} min` : `${stats.avgServiceTimeSeconds}s`}
                 </span>
               </div>
@@ -594,98 +591,95 @@ export const StaffConsole: React.FC = () => {
           )}
         </section>
 
-        {/* Operational 2-Column Split: Active Ticket Serving Card & Live Waiting Queue */}
+        {/* Operational 2-Column Split */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Column: Active Serving Station (5 cols) */}
+          {/* Left Column: Active Customer Station (5 cols) */}
           <div className="lg:col-span-5 space-y-6">
-            {/* Active Ticket Card */}
-            <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden backdrop-blur-sm">
-              <div className="absolute top-0 right-0 w-48 h-48 bg-sky-500/5 rounded-full blur-3xl pointer-events-none" />
-
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center space-x-1.5">
-                  <Activity className="h-3.5 w-3.5 text-sky-400" />
-                  <span>Active Customer Station</span>
-                </span>
-                <span className="text-xs font-mono font-semibold text-slate-400 bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700/60">
-                  {currentCounter ? `Counter #${currentCounter.number}` : 'No Counter'}
+            <div className="bg-white border border-[#E5E7EB] rounded-[16px] p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-5 pb-3 border-b border-[#E5E7EB]">
+                <div className="flex items-center space-x-2">
+                  <Activity className="h-4 w-4 text-[#1F5C3A]" />
+                  <h2 className="text-sm font-semibold text-[#14201A]">Active Customer Station</h2>
+                </div>
+                <span className="text-xs font-medium text-[#6B7A72] bg-[#FAFAF7] px-2.5 py-1 rounded-[8px] border border-[#E5E7EB]">
+                  {currentCounter ? `Counter #${currentCounter.number}` : 'No counter'}
                 </span>
               </div>
 
               {activeTicket ? (
-                <div className="space-y-6">
-                  {/* Big Boarding-Pass Header */}
-                  <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 border border-slate-800 text-center relative shadow-inner">
-                    <span className="text-xs text-sky-400 font-semibold uppercase tracking-wider block mb-1">
+                <div className="space-y-5">
+                  {/* Ticket Card */}
+                  <div className="p-6 rounded-[12px] bg-[#FAFAF7] border border-[#E5E7EB] text-center">
+                    <span className="text-xs text-[#6B7A72] font-medium block mb-1">
                       {activeTicket.service.name}
                     </span>
-                    <h2 className="text-5xl font-extrabold tracking-tight text-white font-mono my-2">
+                    <h3 className="text-4xl font-bold tracking-tight text-[#14201A] my-2">
                       {activeTicket.ticketNumber}
-                    </h2>
+                    </h3>
                     <div className="flex items-center justify-center space-x-2 mt-3">
                       <span
-                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase ${
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-[8px] text-xs font-semibold ${
                           activeTicket.status === 'SERVING'
-                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                            : 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse'
+                            ? 'bg-[#E8F3EC] text-[#1F5C3A]'
+                            : 'bg-[#FEF3C7] text-[#92400E]'
                         }`}
                       >
-                        {activeTicket.status}
+                        {activeTicket.status === 'SERVING' ? 'Serving now' : 'Called'}
                       </span>
-                      <span className="text-xs text-slate-400 font-mono bg-slate-800 px-2.5 py-1 rounded-md">
-                        Pass Code: <strong className="text-white">{activeTicket.verificationCode}</strong>
+                      <span className="text-xs text-[#6B7A72] bg-white border border-[#E5E7EB] px-2.5 py-0.5 rounded-[8px]">
+                        Pass code: <strong className="text-[#14201A] font-semibold">{activeTicket.verificationCode}</strong>
                       </span>
                     </div>
                   </div>
 
-                  {/* Customer Information */}
-                  <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-2.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-400 flex items-center space-x-1.5">
-                        <User className="h-3.5 w-3.5 text-slate-500" />
-                        <span>Customer Name</span>
+                  {/* Customer Information List */}
+                  <div className="rounded-[12px] border border-[#E5E7EB] divide-y divide-[#E5E7EB] bg-white text-xs">
+                    <div className="p-3 flex items-center justify-between">
+                      <span className="text-[#6B7A72] flex items-center space-x-1.5">
+                        <User className="h-3.5 w-3.5 text-[#6B7A72]" />
+                        <span>Customer</span>
                       </span>
-                      <span className="font-semibold text-white">{activeTicket.customerName}</span>
+                      <span className="font-medium text-[#14201A]">{activeTicket.customerName}</span>
                     </div>
                     {activeTicket.customerPhone && (
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-400 flex items-center space-x-1.5">
-                          <Phone className="h-3.5 w-3.5 text-slate-500" />
-                          <span>Phone Number</span>
+                      <div className="p-3 flex items-center justify-between">
+                        <span className="text-[#6B7A72] flex items-center space-x-1.5">
+                          <Phone className="h-3.5 w-3.5 text-[#6B7A72]" />
+                          <span>Phone</span>
                         </span>
-                        <span className="font-mono text-slate-300">{activeTicket.customerPhone}</span>
+                        <span className="text-[#14201A] font-medium">{activeTicket.customerPhone}</span>
                       </div>
                     )}
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-400 flex items-center space-x-1.5">
-                        <Clock className="h-3.5 w-3.5 text-slate-500" />
-                        <span>Called At</span>
+                    <div className="p-3 flex items-center justify-between">
+                      <span className="text-[#6B7A72] flex items-center space-x-1.5">
+                        <Clock className="h-3.5 w-3.5 text-[#6B7A72]" />
+                        <span>Called at</span>
                       </span>
-                      <span className="font-mono text-slate-300">
+                      <span className="text-[#14201A]">
                         {activeTicket.calledAt ? new Date(activeTicket.calledAt).toLocaleTimeString() : 'Just now'}
                       </span>
                     </div>
                     {activeTicket.priorityScore > 1 && (
-                      <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-800">
-                        <span className="text-amber-400 flex items-center space-x-1.5">
+                      <div className="p-3 flex items-center justify-between bg-[#E8F3EC]/50">
+                        <span className="text-[#1F5C3A] font-medium flex items-center space-x-1.5">
                           <Sparkles className="h-3.5 w-3.5" />
-                          <span>Priority Status</span>
+                          <span>Priority tier</span>
                         </span>
-                        <span className="font-bold text-amber-400">High Priority Tier</span>
+                        <span className="font-semibold text-[#1F5C3A]">High priority</span>
                       </div>
                     )}
                   </div>
 
                   {/* Operational Action Buttons */}
-                  <div className="space-y-3">
+                  <div className="space-y-2.5 pt-1">
                     {activeTicket.status === 'CALLED' && (
                       <button
                         onClick={handleStartServing}
                         disabled={actionLoading}
-                        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 transition flex items-center justify-center space-x-2"
+                        className="w-full py-3 rounded-[12px] bg-[#1F5C3A] hover:bg-[#18482E] text-white font-semibold text-xs transition flex items-center justify-center space-x-2"
                       >
                         <Play className="h-4 w-4 fill-white" />
-                        <span>Start Serving Customer</span>
+                        <span>Start serving customer</span>
                       </button>
                     )}
 
@@ -693,53 +687,53 @@ export const StaffConsole: React.FC = () => {
                       <button
                         onClick={handleCompleteTicket}
                         disabled={actionLoading}
-                        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-sky-600/30 transition flex items-center justify-center space-x-2"
+                        className="w-full py-3 rounded-[12px] bg-[#1F5C3A] hover:bg-[#18482E] text-white font-semibold text-xs transition flex items-center justify-center space-x-2"
                       >
                         <Check className="h-4 w-4" />
-                        <span>Mark Customer as Served (Complete)</span>
+                        <span>Complete service</span>
                       </button>
                     )}
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-2.5">
                       <button
                         onClick={() => setSkipModalOpen(true)}
                         disabled={actionLoading}
-                        className="py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-rose-300 hover:text-rose-200 border border-rose-500/20 text-xs font-semibold transition flex items-center justify-center space-x-1.5"
+                        className="py-2.5 rounded-[12px] bg-white hover:bg-[#FFF5F5] text-[#C53030] border border-[#FED7D7] text-xs font-medium transition flex items-center justify-center space-x-1.5"
                       >
                         <SkipForward className="h-3.5 w-3.5" />
-                        <span>Skip Customer</span>
+                        <span>Skip customer</span>
                       </button>
 
                       <button
                         onClick={handleCallNext}
                         disabled={actionLoading}
-                        className="py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold transition flex items-center justify-center space-x-1.5"
+                        className="py-2.5 rounded-[12px] bg-white hover:bg-[#FAFAF7] text-[#14201A] border border-[#E5E7EB] text-xs font-medium transition flex items-center justify-center space-x-1.5"
                       >
-                        <ChevronRight className="h-3.5 w-3.5" />
-                        <span>Next in Queue</span>
+                        <Play className="h-3 w-3 text-[#1F5C3A]" />
+                        <span>Call next ticket</span>
                       </button>
                     </div>
                   </div>
                 </div>
               ) : (
-                /* Empty Counter State: Ready to Call Next */
-                <div className="text-center py-12 px-4 rounded-2xl bg-slate-950/40 border border-slate-800/60 space-y-4">
-                  <div className="h-16 w-16 mx-auto rounded-2xl bg-slate-800/80 flex items-center justify-center text-slate-500 border border-slate-700/60 shadow-inner">
-                    <User className="h-8 w-8 text-slate-400" />
+                /* Empty Counter State */
+                <div className="text-center py-10 px-4 rounded-[12px] bg-[#FAFAF7] border border-[#E5E7EB] space-y-4">
+                  <div className="h-12 w-12 mx-auto rounded-full bg-[#E8F3EC] flex items-center justify-center text-[#1F5C3A]">
+                    <User className="h-6 w-6" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-white">Counter is Idle & Available</h3>
-                    <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
+                    <h3 className="text-sm font-semibold text-[#14201A]">Counter is idle and available</h3>
+                    <p className="text-xs text-[#6B7A72] mt-1 max-w-xs mx-auto">
                       Ready to serve waiting customers. Press the button below to summon the next priority ticket.
                     </p>
                   </div>
                   <button
                     onClick={handleCallNext}
                     disabled={actionLoading || !selectedCounterId}
-                    className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-sky-600/30 transition inline-flex items-center space-x-2"
+                    className="px-5 py-2.5 rounded-[12px] bg-[#1F5C3A] hover:bg-[#18482E] text-white font-semibold text-xs transition inline-flex items-center space-x-2 disabled:opacity-50"
                   >
                     <Play className="h-4 w-4 fill-white" />
-                    <span>Call Next Customer</span>
+                    <span>Call next customer</span>
                   </button>
                 </div>
               )}
@@ -747,31 +741,31 @@ export const StaffConsole: React.FC = () => {
 
             {/* Recalls / Skipped Tickets Tray */}
             {skippedTickets.length > 0 && (
-              <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-xl backdrop-blur-sm">
+              <div className="bg-white border border-[#E5E7EB] rounded-[16px] p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center space-x-1.5">
-                    <RotateCcw className="h-3.5 w-3.5 text-amber-400" />
-                    <span>Recent Skipped Tickets ({skippedTickets.length})</span>
+                  <span className="text-xs font-semibold text-[#14201A] flex items-center space-x-1.5">
+                    <RotateCcw className="h-3.5 w-3.5 text-[#6B7A72]" />
+                    <span>Recently skipped tickets ({skippedTickets.length})</span>
                   </span>
-                  <span className="text-[10px] text-slate-500">Eligible for recall</span>
+                  <span className="text-[11px] text-[#6B7A72]">Eligible for recall</span>
                 </div>
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                <div className="divide-y divide-[#E5E7EB] border border-[#E5E7EB] rounded-[12px] overflow-hidden max-h-48 overflow-y-auto">
                   {skippedTickets.slice(0, 5).map((t) => (
                     <div
                       key={t.id}
-                      className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex items-center justify-between text-xs hover:border-slate-700 transition"
+                      className="p-3 bg-white flex items-center justify-between text-xs hover:bg-[#FAFAF7] transition"
                     >
                       <div>
                         <div className="flex items-center space-x-2">
-                          <span className="font-mono font-bold text-white">{t.ticketNumber}</span>
-                          <span className="text-[10px] text-slate-400">{t.customerName}</span>
+                          <span className="font-semibold text-[#14201A]">{t.ticketNumber}</span>
+                          <span className="text-[#6B7A72]">{t.customerName}</span>
                         </div>
-                        <p className="text-[10px] text-slate-500 mt-0.5">Reason: {t.skipReason || 'Absent'}</p>
+                        <p className="text-[11px] text-[#6B7A72] mt-0.5">Reason: {t.skipReason || 'Absent'}</p>
                       </div>
                       <button
                         onClick={() => handleRecallTicket(t.id)}
                         disabled={actionLoading}
-                        className="px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/30 text-xs font-semibold transition flex items-center space-x-1"
+                        className="px-2.5 py-1.5 rounded-[8px] bg-[#E8F3EC] hover:bg-[#D5EADF] text-[#1F5C3A] text-xs font-semibold transition flex items-center space-x-1"
                       >
                         <RotateCcw className="h-3 w-3" />
                         <span>Recall</span>
@@ -785,21 +779,20 @@ export const StaffConsole: React.FC = () => {
 
           {/* Right Column: Live Waiting Queue List (7 cols) */}
           <div className="lg:col-span-7 space-y-4">
-            <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-2xl backdrop-blur-sm">
-              {/* Queue Service Tabs */}
-              <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+            <div className="bg-white border border-[#E5E7EB] rounded-[16px] p-6 shadow-sm">
+              {/* Queue Header & Filter */}
+              <div className="flex items-center justify-between mb-5 pb-3 border-b border-[#E5E7EB]">
                 <div className="flex items-center space-x-2">
-                  <Layers className="h-4 w-4 text-sky-400" />
-                  <h3 className="font-bold text-white text-sm">Waiting Queue Inspection</h3>
+                  <Layers className="h-4 w-4 text-[#1F5C3A]" />
+                  <h3 className="font-semibold text-[#14201A] text-sm">Waiting queue inspection</h3>
                 </div>
 
-                {/* Queue Filter */}
                 <div className="flex items-center space-x-2">
-                  <span className="text-xs text-slate-400">Queue:</span>
+                  <span className="text-xs text-[#6B7A72]">Queue</span>
                   <select
                     value={selectedQueueId}
                     onChange={(e) => setSelectedQueueId(e.target.value)}
-                    className="bg-slate-800 border border-slate-700 text-white text-xs rounded-lg px-2.5 py-1.5 outline-none font-medium"
+                    className="bg-[#FAFAF7] border border-[#E5E7EB] text-[#14201A] text-xs rounded-[12px] px-3 py-1.5 outline-none font-medium"
                   >
                     {queues.map((q) => (
                       <option key={q.id} value={q.id}>
@@ -810,35 +803,35 @@ export const StaffConsole: React.FC = () => {
                 </div>
               </div>
 
-              {/* Waiting Customers Table / List */}
+              {/* Waiting Customers List */}
               {waitingList.length > 0 ? (
-                <div className="space-y-2.5 max-h-[600px] overflow-y-auto pr-1">
+                <div className="border border-[#E5E7EB] rounded-[12px] divide-y divide-[#E5E7EB] max-h-[600px] overflow-y-auto">
                   {waitingList.map((item, index) => (
                     <div
                       key={item.id}
-                      className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 hover:border-slate-700/80 transition flex items-center justify-between group"
+                      className="p-3.5 bg-white hover:bg-[#FAFAF7] transition flex items-center justify-between"
                     >
                       <div className="flex items-center space-x-3.5">
-                        <div className="h-9 w-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center font-mono font-bold text-xs text-slate-400">
+                        <div className="h-8 w-8 rounded-[8px] bg-[#FAFAF7] border border-[#E5E7EB] flex items-center justify-center font-semibold text-xs text-[#6B7A72]">
                           #{index + 1}
                         </div>
                         <div>
                           <div className="flex items-center space-x-2">
-                            <span className="font-mono font-bold text-white text-sm">{item.ticketNumber}</span>
+                            <span className="font-semibold text-[#14201A] text-sm">{item.ticketNumber}</span>
                             {item.priorityScore > 1 && (
-                              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                              <span className="px-2 py-0.5 rounded-[8px] text-[10px] font-semibold bg-[#E8F3EC] text-[#1F5C3A]">
                                 Priority
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-slate-400 mt-0.5">{item.customerName}</p>
+                          <p className="text-xs text-[#6B7A72] mt-0.5">{item.customerName}</p>
                         </div>
                       </div>
 
                       <div className="flex items-center space-x-3">
                         <div className="text-right text-xs">
-                          <span className="text-[10px] text-slate-500 block">Joined at</span>
-                          <span className="text-slate-400 font-mono">
+                          <span className="text-[11px] text-[#6B7A72] block">Joined</span>
+                          <span className="text-[#14201A]">
                             {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
@@ -847,7 +840,7 @@ export const StaffConsole: React.FC = () => {
                           onClick={() => handleCallSpecific(item.id)}
                           disabled={actionLoading || !selectedCounterId}
                           title="Call this specific ticket to my counter"
-                          className="px-3 py-1.5 rounded-xl bg-sky-600/20 hover:bg-sky-600 text-sky-400 hover:text-white border border-sky-500/30 text-xs font-semibold transition flex items-center space-x-1"
+                          className="px-3 py-1.5 rounded-[12px] bg-white hover:bg-[#E8F3EC] text-[#1F5C3A] border border-[#E5E7EB] text-xs font-semibold transition flex items-center space-x-1"
                         >
                           <Play className="h-3 w-3" />
                           <span>Call</span>
@@ -857,10 +850,10 @@ export const StaffConsole: React.FC = () => {
                   ))}
                 </div>
               ) : (
-                <div className="py-16 text-center text-slate-500 space-y-2">
-                  <CheckCircle className="h-10 w-10 mx-auto text-slate-600" />
-                  <p className="text-sm font-semibold text-slate-400">Queue is Clear</p>
-                  <p className="text-xs text-slate-500">There are currently no waiting tickets in this service queue.</p>
+                <div className="py-16 text-center text-[#6B7A72] space-y-2">
+                  <CheckCircle className="h-10 w-10 mx-auto text-[#1F5C3A]" />
+                  <p className="text-sm font-semibold text-[#14201A]">Queue is clear</p>
+                  <p className="text-xs text-[#6B7A72]">There are currently no waiting tickets in this service queue.</p>
                 </div>
               )}
             </div>
@@ -870,23 +863,20 @@ export const StaffConsole: React.FC = () => {
 
       {/* Skip Customer Confirmation Modal */}
       {skipModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center space-x-3 text-rose-400">
-              <ShieldAlert className="h-6 w-6" />
-              <h3 className="text-base font-bold text-white">Skip Customer Ticket</h3>
-            </div>
-            <p className="text-xs text-slate-300">
-              Are you sure you want to skip Ticket <strong className="text-white font-mono">{activeTicket?.ticketNumber}</strong>?
-              A reason is required to maintain audit records.
+        <div className="fixed inset-0 z-50 bg-[#14201A]/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-[#E5E7EB] rounded-[16px] max-w-md w-full p-6 space-y-4 shadow-xl">
+            <h3 className="text-sm font-semibold text-[#14201A]">Skip customer ticket</h3>
+            <p className="text-xs text-[#6B7A72]">
+              Are you sure you want to skip ticket <strong className="text-[#14201A] font-semibold">{activeTicket?.ticketNumber}</strong>?
+              A reason is required to maintain accurate queue records.
             </p>
 
             <div>
-              <label className="text-xs font-semibold text-slate-400 block mb-1.5">Skip Reason:</label>
+              <label className="text-xs font-medium text-[#6B7A72] block mb-1.5">Reason for skipping</label>
               <select
                 value={skipReason}
                 onChange={(e) => setSkipReason(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:ring-2 focus:ring-rose-500"
+                className="w-full bg-[#FAFAF7] border border-[#E5E7EB] rounded-[12px] p-2.5 text-xs text-[#14201A] outline-none focus:ring-1 focus:ring-[#1F5C3A]"
               >
                 <option value="Customer absent / No-show">Customer absent / No-show</option>
                 <option value="Missing required documentation">Missing required documentation</option>
@@ -899,16 +889,16 @@ export const StaffConsole: React.FC = () => {
             <div className="flex items-center justify-end space-x-3 pt-3">
               <button
                 onClick={() => setSkipModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition"
+                className="px-4 py-2 rounded-[12px] text-xs font-medium bg-white text-[#6B7A72] border border-[#E5E7EB] hover:bg-[#FAFAF7] transition"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSkipTicket}
                 disabled={actionLoading}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/30 transition"
+                className="px-4 py-2 rounded-[12px] text-xs font-semibold bg-[#C53030] hover:bg-[#9B2C2C] text-white transition"
               >
-                Confirm Skip
+                Confirm skip
               </button>
             </div>
           </div>

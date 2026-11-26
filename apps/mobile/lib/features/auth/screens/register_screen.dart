@@ -78,7 +78,7 @@ class _CustomerRegisterScreenState extends ConsumerState<CustomerRegisterScreen>
                       decoration: BoxDecoration(
                         color: AppTheme.mintTint,
                         borderRadius: BorderRadius.circular(AppTheme.radiusInput),
-                        border: Border.all(color: AppTheme.forestGreen.withOpacity(0.3)),
+                        border: Border.all(color: AppTheme.forestGreen.withValues(alpha: 0.3)),
                       ),
                       child: Text(
                         authState.error!,

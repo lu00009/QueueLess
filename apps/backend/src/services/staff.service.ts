@@ -2,6 +2,7 @@ import { prisma } from '../config/database';
 import { AppError } from '../middleware/error.middleware';
 import { OrgRole, MembershipStatus, UserRole } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import { EmailService } from './email.service';
 
 export class StaffService {
   static async listByOrg(orgId: string) {
@@ -60,17 +61,36 @@ export class StaffService {
       throw new AppError('User is already a member of this organization', 409);
     }
 
-    return prisma.organizationMembership.create({
+    const membership = await prisma.organizationMembership.create({
       data: {
         userId: user.id,
         organizationId: orgId,
         role: data.role,
-        status: MembershipStatus.ACTIVE,
+        status: MembershipStatus.INVITED,
       },
       include: {
         user: true,
       },
     });
+
+    // Fetch organization name for branded email dispatch
+    const org = await prisma.organization.findUnique({
+      where: { id: orgId },
+      select: { name: true },
+    });
+
+    // Send invitation email
+    const tempPassword = !user ? 'Staff@123456' : 'Staff@123456';
+    await EmailService.sendStaffInvitation({
+      recipientEmail: user.email,
+      recipientName: user.fullName,
+      organizationName: org?.name || 'QueueLess Organization',
+      role: data.role,
+      temporaryPassword: tempPassword,
+      userId: user.id,
+    });
+
+    return membership;
   }
 
   static async updateRole(orgId: string, userId: string, role: OrgRole) {
@@ -138,6 +158,10 @@ export class StaffService {
     });
     if (!membership) throw new AppError('Membership not found', 404);
 
+    if (membership.role === OrgRole.ORG_OWNER) {
+      throw new AppError('Cannot remove organization owner', 400);
+    }
+
     return prisma.$transaction([
       prisma.staffAssignment.deleteMany({
         where: { userId, organizationId: orgId },
@@ -146,5 +170,23 @@ export class StaffService {
         where: { id: membership.id },
       }),
     ]);
+  }
+
+  static async activate(orgId: string, userId: string) {
+    const membership = await prisma.organizationMembership.findUnique({
+      where: {
+        userId_organizationId: {
+          userId,
+          organizationId: orgId,
+        },
+      },
+    });
+    if (!membership) throw new AppError('Membership not found', 404);
+
+    return prisma.organizationMembership.update({
+      where: { id: membership.id },
+      data: { status: MembershipStatus.ACTIVE },
+      include: { user: true },
+    });
   }
 }

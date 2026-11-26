@@ -132,7 +132,7 @@ export class QueueEngineService {
     }
 
     if (queues.length === 0) {
-      throw new AppError('No open queues available for this counter', 404);
+      throw new AppError('No open queues available for this counter', 400);
     }
 
     const queueIds = queues.map((q) => q.id);
@@ -149,7 +149,7 @@ export class QueueEngineService {
       `, queueIds);
 
       if (!candidates || candidates.length === 0) {
-        throw new AppError('No waiting customers in queue for this counter', 404);
+        throw new AppError('No waiting customers in queue for this counter', 400);
       }
 
       const nextTicketId = candidates[0].id;

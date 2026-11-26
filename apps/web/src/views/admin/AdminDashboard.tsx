@@ -312,6 +312,19 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleActivateStaff = async (userId: string) => {
+    if (!orgId) return;
+    try {
+      await apiClient.post(`/organizations/${orgId}/staff/${userId}/activate`, {}, {
+        headers: { 'X-Organization-Id': orgId },
+      });
+      showNotification('Staff member activated successfully');
+      loadData();
+    } catch (err: any) {
+      showNotification(err.response?.data?.message || 'Failed to activate staff', true);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#FAFAF7] text-[#14201A] flex flex-col font-sans">
       {/* Top Header - Simple & Professional */}
@@ -730,20 +743,37 @@ export const AdminDashboard: React.FC = () => {
                         </span>
                       </td>
                       <td className="p-4">
-                        <span className="px-2 py-0.5 rounded-[8px] text-[10px] font-semibold bg-[#E8F3EC] text-[#1F5C3A]">
+                        <span className={`px-2 py-0.5 rounded-[8px] text-[10px] font-semibold ${
+                          m.status === 'ACTIVE'
+                            ? 'bg-[#E8F3EC] text-[#1F5C3A]'
+                            : m.status === 'INVITED'
+                            ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                            : 'bg-gray-100 text-gray-600'
+                        }`}>
                           {m.status}
                         </span>
                       </td>
                       <td className="p-4 text-right">
-                        {m.role !== 'ORG_OWNER' && (
-                          <button
-                            onClick={() => handleRemoveStaff(m.user?.id)}
-                            className="p-1.5 rounded-[8px] text-red-600 hover:bg-red-50 transition"
-                            title="Remove staff member"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        )}
+                        <div className="flex items-center justify-end space-x-2">
+                          {m.status === 'INVITED' && (
+                            <button
+                              onClick={() => handleActivateStaff(m.user?.id)}
+                              className="px-2.5 py-1 rounded-[8px] text-[11px] font-semibold bg-[#E8F3EC] text-[#1F5C3A] hover:bg-[#D5EADF] transition"
+                              title="Activate staff member"
+                            >
+                              Activate
+                            </button>
+                          )}
+                          {m.role !== 'ORG_OWNER' && (
+                            <button
+                              onClick={() => handleRemoveStaff(m.user?.id)}
+                              className="p-1.5 rounded-[8px] text-red-600 hover:bg-red-50 transition"
+                              title="Remove staff member"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

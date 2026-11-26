@@ -1,31 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../discovery/screens/discovery_screen.dart';
 import '../../ticket/screens/active_tickets_screen.dart';
 import '../../ticket/screens/ticket_history_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 
-class HomeNavigationScreen extends StatefulWidget {
+final homeNavigationIndexProvider = StateProvider<int>((ref) => 0);
+
+class HomeNavigationScreen extends ConsumerWidget {
   const HomeNavigationScreen({super.key});
 
   @override
-  State<HomeNavigationScreen> createState() => _HomeNavigationScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentIndex = ref.watch(homeNavigationIndexProvider);
 
-class _HomeNavigationScreenState extends State<HomeNavigationScreen> {
-  int _currentIndex = 0;
+    final List<Widget> screens = const [
+      DiscoveryScreen(),
+      ActiveTicketsScreen(),
+      TicketHistoryScreen(),
+      CustomerProfileScreen(),
+    ];
 
-  final List<Widget> _screens = const [
-    DiscoveryScreen(),
-    ActiveTicketsScreen(),
-    TicketHistoryScreen(),
-    CustomerProfileScreen(),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_currentIndex],
+      backgroundColor: AppTheme.offWhite,
+      body: IndexedStack(
+        index: currentIndex,
+        children: screens,
+      ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: AppTheme.white,
@@ -39,10 +41,10 @@ class _HomeNavigationScreenState extends State<HomeNavigationScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildNavItem(0, Icons.search_outlined, Icons.search, 'Explore'),
-                _buildNavItem(1, Icons.confirmation_number_outlined, Icons.confirmation_number, 'My Tickets'),
-                _buildNavItem(2, Icons.history_outlined, Icons.history, 'History'),
-                _buildNavItem(3, Icons.person_outline, Icons.person, 'Profile'),
+                _buildNavItem(ref, 0, Icons.explore_outlined, Icons.explore, 'Explore', currentIndex),
+                _buildNavItem(ref, 1, Icons.confirmation_number_outlined, Icons.confirmation_number, 'My queue', currentIndex),
+                _buildNavItem(ref, 2, Icons.history_outlined, Icons.history, 'History', currentIndex),
+                _buildNavItem(ref, 3, Icons.person_outline, Icons.person, 'Profile', currentIndex),
               ],
             ),
           ),
@@ -51,12 +53,19 @@ class _HomeNavigationScreenState extends State<HomeNavigationScreen> {
     );
   }
 
-  Widget _buildNavItem(int index, IconData unselectedIcon, IconData selectedIcon, String label) {
-    final isSelected = _currentIndex == index;
+  Widget _buildNavItem(
+    WidgetRef ref,
+    int index,
+    IconData unselectedIcon,
+    IconData selectedIcon,
+    String label,
+    int currentIndex,
+  ) {
+    final isSelected = currentIndex == index;
     final color = isSelected ? AppTheme.forestGreen : AppTheme.softGrey;
 
     return InkWell(
-      onTap: () => setState(() => _currentIndex = index),
+      onTap: () => ref.read(homeNavigationIndexProvider.notifier).state = index,
       splashColor: Colors.transparent,
       highlightColor: Colors.transparent,
       child: Padding(
