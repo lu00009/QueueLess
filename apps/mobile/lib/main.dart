@@ -100,7 +100,11 @@ final routerProvider = Provider<GoRouter>((ref) {
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  ApiClient.setBaseUrl('http://127.0.0.1:5000/api/v1');
+  const apiUrl = String.fromEnvironment(
+    'API_URL',
+    defaultValue: 'https://queueless-swh4.onrender.com/api/v1',
+  );
+  ApiClient.setBaseUrl(apiUrl);
 
   runApp(
     const ProviderScope(

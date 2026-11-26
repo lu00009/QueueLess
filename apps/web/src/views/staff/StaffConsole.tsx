@@ -237,7 +237,8 @@ export const StaffConsole: React.FC = () => {
   // Real-time Socket.IO Connection and Room Subscription
   useEffect(() => {
     const token = localStorage.getItem('access_token');
-    const socket: Socket = io({
+    const wsUrl = import.meta.env.VITE_WS_URL || 'https://queueless-swh4.onrender.com';
+    const socket: Socket = io(wsUrl, {
       auth: { token: token ? `Bearer ${token}` : undefined },
       path: '/socket.io/',
       transports: ['websocket', 'polling'],

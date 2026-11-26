@@ -1,11 +1,16 @@
 import 'package:dio/dio.dart';
 
+const String defaultBackendUrl = String.fromEnvironment(
+  'API_URL',
+  defaultValue: 'https://queueless-swh4.onrender.com/api/v1',
+);
+
 class ApiClient {
   static final Dio dio = Dio(
     BaseOptions(
-      baseUrl: 'http://10.0.2.2:5000/api/v1', // Android emulator default loopback; can be overridden
-      connectTimeout: const Duration(seconds: 5),
-      receiveTimeout: const Duration(seconds: 5),
+      baseUrl: defaultBackendUrl,
+      connectTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 15),
       headers: {
         'Content-Type': 'application/json',
       },

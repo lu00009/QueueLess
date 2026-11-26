@@ -1,8 +1,10 @@
 import axios from 'axios';
 import { HealthCheckResponse } from '@queueless/shared-types';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://queueless-swh4.onrender.com/api/v1';
+
 export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api/v1',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -18,7 +20,7 @@ apiClient.interceptors.response.use(
       const refreshToken = localStorage.getItem('refresh_token');
       if (refreshToken) {
         try {
-          const res = await axios.post('/api/v1/auth/refresh-token', { refreshToken });
+          const res = await axios.post(`${API_BASE_URL}/auth/refresh-token`, { refreshToken });
           const newAccessToken = res.data.data.accessToken;
           const newRefreshToken = res.data.data.refreshToken;
 
